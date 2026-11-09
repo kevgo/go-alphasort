@@ -1,0 +1,12 @@
+# more info at https://github.com/kevgo/run-that-app
+
+actionlint 1.7.12
+cucumber-sort 0.2.0
+deadcode 0.52.0
+ghokin 3.10.0
+gofumpt 0.12.0
+golangci-lint 2.15.0
+govulncheck 1.1.4
+rumdl 0.3.2
+staticcheck 2026.2.2
+taplo 0.10.0
