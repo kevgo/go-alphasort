@@ -5,32 +5,13 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/kevgo/go-alphasort/fixer"
+	"github.com/kevgo/go-alphasort/gofiles"
 )
-
-// findGoFiles provides all Go files in the current directory and its subdirectories,
-// skipping the directories that the Go tool ignores.
-func findGoFiles() ([]string, error) {
-	result := []string{}
-	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() && path != "." && skipDir(entry.Name()) {
-			return filepath.SkipDir
-		}
-		if isGoFile(entry) {
-			result = append(result, path)
-		}
-		return nil
-	})
-	return result, err
-}
 
 // fixFile sorts the functions in the given file and writes the result back to disk.
 func fixFile(path string) error {
@@ -53,12 +34,6 @@ func fixFile(path string) error {
 		return nil
 	}
 	return os.WriteFile(path, sorted, info.Mode().Perm())
-}
-
-// isGoFile indicates whether the given directory entry is a Go source file.
-func isGoFile(entry fs.DirEntry) bool {
-	name := entry.Name()
-	return !entry.IsDir() && strings.HasSuffix(name, ".go") && !strings.HasPrefix(name, ".")
 }
 
 func main() {
@@ -102,11 +77,13 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	if len(files) == 0 {
-		var err error
-		files, err = findGoFiles()
+		found, err := gofiles.Find(os.DirFS("."))
 		if err != nil {
 			fmt.Fprintln(stderr, err)
 			return 2
+		}
+		for _, file := range found {
+			files = append(files, filepath.FromSlash(file))
 		}
 	}
 	exitCode := 0
@@ -117,10 +94,4 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	return exitCode
-}
-
-// skipDir indicates whether the directory with the given name should not be processed,
-// following the conventions of the Go tool.
-func skipDir(name string) bool {
-	return name == "vendor" || name == "testdata" || strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_")
 }
