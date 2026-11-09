@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// SortFuncs returns the given Go source code with its functions and methods reordered:
+// Sort returns the given Go source code with its functions and methods reordered:
 //
 //   - The constructor of a type declared in this file (the function named "New" + type name)
 //     and the methods of that type move directly behind the type declaration:
@@ -27,7 +27,7 @@ import (
 // come before lowercase ones.
 // The sort is stable, so functions with identical names (like multiple init functions)
 // keep their relative order.
-func SortFuncs(filename string, src []byte) ([]byte, error) {
+func Sort(filename string, src []byte) ([]byte, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, filename, src, parser.ParseComments|parser.SkipObjectResolution)
 	if err != nil {

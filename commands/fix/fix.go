@@ -53,7 +53,7 @@ func fixFile(path string) error {
 	if err != nil {
 		return err
 	}
-	sorted, err := SortFuncs(path, src)
+	sorted, err := Sort(path, src)
 	if err != nil {
 		return err
 	}
