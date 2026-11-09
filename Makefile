@@ -26,7 +26,7 @@ help:  # shows the available targets
 	grep -h -E '^[a-zA-Z0-9_-]+:.*?# .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?# "}; {printf "\033[36m%-8s\033[0m %s\n", $$1, $$2}'
 
 install:  # builds for the current platform
-	go install -ldflags="-s	 -w"
+	go install -ldflags="-s -w" ./cmd/alphasort
 
 lint:  # runs the static checks
 	go vet ./...
@@ -44,6 +44,6 @@ update:
 	go mod tidy
 
 
-.PHONY: cuke fix help lint test unit
+.PHONY: cuke fix help install lint test unit update
 .SILENT:
 .DEFAULT_GOAL := help
