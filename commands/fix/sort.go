@@ -10,23 +10,6 @@ import (
 )
 
 // Sort returns the given Go source code with its functions and methods reordered:
-//
-//   - The constructor of a type declared in this file (the function named "New" + type name)
-//     and the methods of that type move directly behind the type declaration:
-//     first the constructor, then the methods sorted alphabetically.
-//   - All other free-standing functions (functions without a receiver)
-//     get sorted alphabetically within the positions they occupy.
-//
-// Methods of types declared in other files, variables, constants, imports,
-// and floating comments stay where they are.
-// Each function or method moves together with its doc comment,
-// any comment that trails it on the same line,
-// and the whitespace that precedes it.
-//
-// Names compare by plain byte order, so capitalized (exported) names
-// come before lowercase ones.
-// The sort is stable, so functions with identical names (like multiple init functions)
-// keep their relative order.
 func Sort(filename string, src []byte) ([]byte, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, filename, src, parser.ParseComments|parser.SkipObjectResolution)
