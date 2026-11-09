@@ -31,9 +31,9 @@ install:  # builds for the current platform
 lint: ${RTA}  # runs the static checks
 	go vet ./...
 	$(DEADCODE) github.com/kevgo/go-alphasort/cmd/alphasort
-	$(ACTIONLINT)
-# 	$(STATICCHECK) ./...
-# 	$(GOLANGCILINT) cache clean && $(GOLANGCILINT) run
+# 	$(ACTIONLINT)
+	$(STATICCHECK) ./...
+	$(GOLANGCILINT) cache clean && $(GOLANGCILINT) run
 
 test: lint unit cuke  # runs all checks and tests
 
