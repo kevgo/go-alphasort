@@ -547,6 +547,314 @@ func beta() {
 }
 `,
 		},
+		"realistic functions with code, empty lines, and comments": {
+			give: `package a
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
+// parseLine splits a "key=value" line.
+// It returns an error for malformed input.
+func parseLine(line string) (string, string, error) {
+	// ignore surrounding whitespace
+	line = strings.TrimSpace(line)
+
+	key, value, found := strings.Cut(line, "=")
+	if !found {
+		return "", "", fmt.Errorf("missing '=' in %q", line)
+	}
+
+	/*
+		Keys are case-insensitive,
+		so normalize them here.
+	*/
+	return strings.ToLower(key), value, nil
+}
+
+// errEmpty is returned for empty input.
+var errEmpty = errors.New("empty input")
+
+// format renders the given entries.
+func format(entries map[string]string) string {
+	var sb strings.Builder
+
+	for key, value := range entries {
+		// "func" and "// comment" inside strings must not confuse the sorter
+		fmt.Fprintf(&sb, "%s=%s // func\n", key, value)
+	}
+
+	return sb.String()
+}
+
+func count(items []string, match func(string) bool) int {
+	result := 0
+	for _, item := range items {
+		if match(item) { // inline comment
+			result++
+		}
+	}
+
+	return result
+}
+`,
+			want: `package a
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
+func count(items []string, match func(string) bool) int {
+	result := 0
+	for _, item := range items {
+		if match(item) { // inline comment
+			result++
+		}
+	}
+
+	return result
+}
+
+// errEmpty is returned for empty input.
+var errEmpty = errors.New("empty input")
+
+// format renders the given entries.
+func format(entries map[string]string) string {
+	var sb strings.Builder
+
+	for key, value := range entries {
+		// "func" and "// comment" inside strings must not confuse the sorter
+		fmt.Fprintf(&sb, "%s=%s // func\n", key, value)
+	}
+
+	return sb.String()
+}
+
+// parseLine splits a "key=value" line.
+// It returns an error for malformed input.
+func parseLine(line string) (string, string, error) {
+	// ignore surrounding whitespace
+	line = strings.TrimSpace(line)
+
+	key, value, found := strings.Cut(line, "=")
+	if !found {
+		return "", "", fmt.Errorf("missing '=' in %q", line)
+	}
+
+	/*
+		Keys are case-insensitive,
+		so normalize them here.
+	*/
+	return strings.ToLower(key), value, nil
+}
+`,
+		},
+		"realistic type with constructor and methods": {
+			give: `package a
+
+import (
+	"errors"
+	"sync"
+)
+
+// Registry stores named values.
+// It is safe for concurrent use.
+type Registry struct {
+	mu sync.Mutex
+
+	// values contains the registered values by name
+	values map[string]int
+}
+
+// Get provides the value registered under the given name.
+func (r *Registry) Get(name string) (int, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	value, ok := r.values[name]
+	return value, ok
+}
+
+// validName indicates whether the given name can be registered.
+func validName(name string) bool {
+	// names must not be empty
+
+	return name != ""
+}
+
+// NewRegistry creates an empty Registry.
+func NewRegistry() *Registry {
+	return &Registry{
+		// start with room for a few entries
+		values: make(map[string]int, 8),
+	}
+}
+
+// Add registers the given value.
+//
+// It overwrites existing values.
+func (r *Registry) Add(name string, value int) error {
+	if !validName(name) {
+		return errInvalidName
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.values[name] = value // overwrite
+	return nil
+}
+
+var errInvalidName = errors.New("invalid name")
+`,
+			want: `package a
+
+import (
+	"errors"
+	"sync"
+)
+
+// Registry stores named values.
+// It is safe for concurrent use.
+type Registry struct {
+	mu sync.Mutex
+
+	// values contains the registered values by name
+	values map[string]int
+}
+
+// NewRegistry creates an empty Registry.
+func NewRegistry() *Registry {
+	return &Registry{
+		// start with room for a few entries
+		values: make(map[string]int, 8),
+	}
+}
+
+// Add registers the given value.
+//
+// It overwrites existing values.
+func (r *Registry) Add(name string, value int) error {
+	if !validName(name) {
+		return errInvalidName
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.values[name] = value // overwrite
+	return nil
+}
+
+// Get provides the value registered under the given name.
+func (r *Registry) Get(name string) (int, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	value, ok := r.values[name]
+	return value, ok
+}
+
+// validName indicates whether the given name can be registered.
+func validName(name string) bool {
+	// names must not be empty
+
+	return name != ""
+}
+
+var errInvalidName = errors.New("invalid name")
+`,
+		},
+		"function literals and multi-line signatures": {
+			give: `package a
+
+func walk(
+	root string,
+	visit func(path string) error, // called for each path
+) error {
+	handle := func(path string) error {
+		// closures contain their own bodies
+
+		return visit(path)
+	}
+
+	return handle(root)
+}
+
+func apply(values []int, transform func(int) int) []int {
+	result := make([]int, 0, len(values))
+
+	for _, value := range values {
+		result = append(result, transform(value))
+	}
+	// done with all values
+
+	return result
+}
+`,
+			want: `package a
+
+func apply(values []int, transform func(int) int) []int {
+	result := make([]int, 0, len(values))
+
+	for _, value := range values {
+		result = append(result, transform(value))
+	}
+	// done with all values
+
+	return result
+}
+
+func walk(
+	root string,
+	visit func(path string) error, // called for each path
+) error {
+	handle := func(path string) error {
+		// closures contain their own bodies
+
+		return visit(path)
+	}
+
+	return handle(root)
+}
+`,
+		},
+		"empty lines and comments at the edges of function bodies": {
+			give: `package a
+
+func beta() {
+
+	// leading comment after an empty line
+	println("b")
+
+	// trailing comment before the closing brace
+
+}
+
+func alpha() {
+	// only a comment
+}
+`,
+			want: `package a
+
+func alpha() {
+	// only a comment
+}
+
+func beta() {
+
+	// leading comment after an empty line
+	println("b")
+
+	// trailing comment before the closing brace
+
+}
+`,
+		},
 		"functions without body": {
 			give: `package a
 
