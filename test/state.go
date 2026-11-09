@@ -19,14 +19,13 @@ type scenarioState struct {
 }
 
 // run executes the given alphasort command in the scenario directory.
-func (s *scenarioState) run(command, input string) error {
+func (s *scenarioState) run(command string) error {
 	args := strings.Fields(command)
 	if len(args) == 0 || args[0] != "alphasort" {
 		return fmt.Errorf("can only run alphasort commands, got %q", command)
 	}
 	cmd := exec.Command(s.binPath, args[1:]...)
 	cmd.Dir = s.dir
-	cmd.Stdin = strings.NewReader(input)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

@@ -6,13 +6,12 @@ Sorts all elements of Golang source code alphabetically.
 
 ```
 go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
-alphasort check [path ...]   # list files whose functions aren't sorted
-alphasort fix [path ...]     # sort the functions in the files
-alphasort help               # show help
+alphasort fix <path> ...   # sort the functions in the given files and directories
+alphasort help             # show help
 ```
 
-- directories are processed recursively (skipping `vendor`, `testdata`, and hidden directories)
-- without paths, reads from STDIN; `fix` then writes the sorted code to STDOUT
+`fix` rewrites the files on disk. It processes directories recursively, skipping
+`vendor`, `testdata`, and hidden directories.
 
 Alphasort reorders the functions and methods in each file:
 
@@ -35,7 +34,7 @@ order.
 
 ```
 make test   # all checks and tests (lint, unit, end-to-end)
-make lint   # only the static checks (go vet, gofmt, go mod tidy, sorted functions)
+make lint   # only the static checks (go vet, go mod tidy)
 make unit   # only the unit tests
 make cuke   # only the end-to-end tests (Cucumber scenarios via godog)
 make fix    # formats the code and sorts its functions

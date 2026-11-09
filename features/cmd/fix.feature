@@ -32,25 +32,6 @@ Feature: "fix" subcommand
       """
     And the file "sorted.go" is unchanged
 
-  Scenario: read from STDIN and write to STDOUT
-    When I run "alphasort fix" with input:
-      """
-      package demo
-
-      func zulu() {}
-
-      func alpha() {}
-      """
-    Then the exit code is 0
-    And the output is:
-      """
-      package demo
-
-      func alpha() {}
-
-      func zulu() {}
-      """
-
   Scenario: process directories recursively, skipping vendor, testdata, and hidden directories
     Given a file "pkg/sub/deep.go" with content:
       """
@@ -142,4 +123,10 @@ Feature: "fix" subcommand
     When I run "alphasort fix -w unsorted.go"
     Then the exit code is 2
     And the error output contains "unknown flag: -w"
+    And the file "unsorted.go" is unchanged
+
+  Scenario: no paths given
+    When I run "alphasort fix"
+    Then the exit code is 2
+    And the error output contains "please provide the files or directories to fix"
     And the file "unsorted.go" is unchanged

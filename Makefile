@@ -11,7 +11,6 @@ fix:  # formats the code and sorts its functions
 lint:  # runs the static checks
 	go vet ./...
 	go mod tidy -diff
-	files=$$(go run ./cmd/alphasort check .); if [ -n "$$files" ]; then echo "functions not sorted (run \"make fix\"):"; echo "$$files"; exit 1; fi
 
 test: lint unit cuke  # runs all checks and tests
 

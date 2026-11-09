@@ -38,13 +38,7 @@ func InitializeScenario(binPath string) func(*godog.ScenarioContext) {
 			return os.WriteFile(path, []byte(text), 0o644)
 		})
 
-		sc.Step(`^I run "([^"]+)"$`, func(command string) error {
-			return state.run(command, "")
-		})
-
-		sc.Step(`^I run "([^"]+)" with input:$`, func(command string, input *godog.DocString) error {
-			return state.run(command, input.Content+"\n")
-		})
+		sc.Step(`^I run "([^"]+)"$`, state.run)
 
 		sc.Step(`^the exit code is (\d+)$`, func(want int) error {
 			if state.exitCode != want {
