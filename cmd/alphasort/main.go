@@ -3,8 +3,6 @@ package main
 
 import (
 	"bytes"
-	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -25,8 +23,25 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
-// processFile sorts the functions in the given file according to the given options.
-func processFile(path string, opts options, stdout io.Writer) error {
+// printUsage prints the help text of this tool.
+func printUsage(w io.Writer) {
+	fmt.Fprint(w, `usage: alphasort <command> [path ...]
+
+Sorts free-standing Go functions alphabetically.
+
+Commands:
+  check  list the files whose functions are not sorted
+  fix    sort the functions in the given files
+  help   show this help
+
+Directories are processed recursively.
+Without paths, reads Go source code from STDIN.
+In this case, "fix" writes the sorted code to STDOUT.
+`)
+}
+
+// processFile checks or fixes the given file.
+func processFile(path string, cmd command, stdout io.Writer) error {
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -35,34 +50,31 @@ func processFile(path string, opts options, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	changed := !bytes.Equal(src, sorted)
-	if changed && opts.list {
-		fmt.Fprintln(stdout, path)
+	if bytes.Equal(src, sorted) {
+		return nil
 	}
-	if opts.write {
-		if !changed {
-			return nil
-		}
+	switch cmd {
+	case commandCheck:
+		_, err = fmt.Fprintln(stdout, path)
+		return err
+	case commandFix:
 		info, err := os.Stat(path)
 		if err != nil {
 			return err
 		}
 		return os.WriteFile(path, sorted, info.Mode().Perm())
 	}
-	if !opts.list {
-		_, err = stdout.Write(sorted)
-	}
-	return err
+	return nil
 }
 
-// processPath sorts the given file, or all Go files in the given directory tree.
-func processPath(root string, opts options, stdout io.Writer) error {
+// processPath checks or fixes the given file, or all Go files in the given directory tree.
+func processPath(root string, cmd command, stdout io.Writer) error {
 	info, err := os.Stat(root)
 	if err != nil {
 		return err
 	}
 	if !info.IsDir() {
-		return processFile(root, opts, stdout)
+		return processFile(root, cmd, stdout)
 	}
 	return filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -74,15 +86,12 @@ func processPath(root string, opts options, stdout io.Writer) error {
 		if !isGoFile(entry) {
 			return nil
 		}
-		return processFile(path, opts, stdout)
+		return processFile(path, cmd, stdout)
 	})
 }
 
-// processStdin sorts the Go source code provided via STDIN and prints the result to STDOUT.
-func processStdin(opts options, stdin io.Reader, stdout io.Writer) error {
-	if opts.write {
-		return errors.New("cannot use -w with standard input")
-	}
+// processStdin checks or fixes the Go source code provided via STDIN.
+func processStdin(cmd command, stdin io.Reader, stdout io.Writer) error {
 	src, err := io.ReadAll(stdin)
 	if err != nil {
 		return err
@@ -91,47 +100,54 @@ func processStdin(opts options, stdin io.Reader, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if opts.list {
+	switch cmd {
+	case commandCheck:
 		if !bytes.Equal(src, sorted) {
-			fmt.Fprintln(stdout, "<standard input>")
+			_, err = fmt.Fprintln(stdout, "<standard input>")
 		}
-		return nil
+	case commandFix:
+		_, err = stdout.Write(sorted)
 	}
-	_, err = stdout.Write(sorted)
 	return err
 }
 
 // run executes this tool with the given CLI arguments and returns the exit code.
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	flags := flag.NewFlagSet("alphasort", flag.ContinueOnError)
-	flags.SetOutput(stderr)
-	var opts options
-	flags.BoolVar(&opts.list, "l", false, "list files whose functions are not sorted alphabetically")
-	flags.BoolVar(&opts.write, "w", false, "write the result to the source files instead of STDOUT")
-	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: alphasort [flags] [path ...]")
-		fmt.Fprintln(stderr)
-		fmt.Fprintln(stderr, "Sorts free-standing Go functions alphabetically.")
-		fmt.Fprintln(stderr, "Without paths, reads Go source code from STDIN.")
-		fmt.Fprintln(stderr)
-		flags.PrintDefaults()
-	}
-	if err := flags.Parse(args); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return 0
-		}
+	if len(args) == 0 {
+		printUsage(stderr)
 		return 2
 	}
-	if flags.NArg() == 0 {
-		if err := processStdin(opts, stdin, stdout); err != nil {
+	var cmd command
+	switch args[0] {
+	case "check":
+		cmd = commandCheck
+	case "fix":
+		cmd = commandFix
+	case "help", "-h", "-help", "--help":
+		printUsage(stdout)
+		return 0
+	default:
+		fmt.Fprintf(stderr, "unknown command: %s\n\n", args[0])
+		printUsage(stderr)
+		return 2
+	}
+	paths := args[1:]
+	for _, path := range paths {
+		if strings.HasPrefix(path, "-") {
+			fmt.Fprintf(stderr, "unknown flag: %s\n", path)
+			return 2
+		}
+	}
+	if len(paths) == 0 {
+		if err := processStdin(cmd, stdin, stdout); err != nil {
 			fmt.Fprintln(stderr, err)
 			return 2
 		}
 		return 0
 	}
 	exitCode := 0
-	for _, path := range flags.Args() {
-		if err := processPath(path, opts, stdout); err != nil {
+	for _, path := range paths {
+		if err := processPath(path, cmd, stdout); err != nil {
 			fmt.Fprintln(stderr, err)
 			exitCode = 2
 		}
@@ -145,7 +161,10 @@ func skipDir(name string) bool {
 	return name == "vendor" || name == "testdata" || strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_")
 }
 
-type options struct {
-	list  bool
-	write bool
-}
+// command is a subcommand of this tool.
+type command int
+
+const (
+	commandCheck command = iota // list files that aren't sorted
+	commandFix                  // sort files
+)

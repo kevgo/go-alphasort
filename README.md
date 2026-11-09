@@ -6,13 +6,13 @@ Sorts all elements of Golang source code alphabetically.
 
 ```
 go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
-alphasort [-l] [-w] [path ...]
+alphasort check [path ...]   # list files whose functions aren't sorted
+alphasort fix [path ...]     # sort the functions in the files
+alphasort help               # show help
 ```
 
-- `-w`: write the sorted result back to the files
-- `-l`: list files whose functions aren't sorted
 - directories are processed recursively (skipping `vendor`, `testdata`, and hidden directories)
-- without paths, reads from STDIN and writes to STDOUT
+- without paths, reads from STDIN; `fix` then writes the sorted code to STDOUT
 
 Free-standing functions (functions without a receiver) get sorted by name in
 plain byte order, so capitalized (exported) functions come before lowercase ones. Each function moves together with its doc comment,

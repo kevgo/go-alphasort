@@ -69,6 +69,13 @@ func InitializeScenario(binPath string) func(*godog.ScenarioContext) {
 			return compare("file "+name, string(have), state.originals[name])
 		})
 
+		sc.Step(`^the output contains "([^"]+)"$`, func(want string) error {
+			if !strings.Contains(state.stdout, want) {
+				return fmt.Errorf("expected STDOUT to contain %q but it was:\n%s", want, state.stdout)
+			}
+			return nil
+		})
+
 		sc.Step(`^the output is:$`, func(want *godog.DocString) error {
 			return compare("STDOUT", state.stdout, want.Content+"\n")
 		})
