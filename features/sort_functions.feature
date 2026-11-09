@@ -14,7 +14,8 @@ Feature: sort free-standing functions alphabetically
       func alpha() {}
       """
     When I run "alphasort fix main.go"
-    Then the output is empty
+    Then the exit code is 0
+    And the output is empty
     And the file "main.go" now has content:
       """
       package main
@@ -27,7 +28,6 @@ Feature: sort free-standing functions alphabetically
 
       func main() {}
       """
-    And the exit code is 0
 
   Scenario: doc comments, directives, and trailing comments move with their function
     Given a file "lib.go" with content:
@@ -43,7 +43,8 @@ Feature: sort free-standing functions alphabetically
       func Alpha() {}
       """
     When I run "alphasort fix lib.go"
-    Then the file "lib.go" now has content:
+    Then the exit code is 0
+    And the file "lib.go" now has content:
       """
       package lib
 
@@ -55,7 +56,6 @@ Feature: sort free-standing functions alphabetically
       //go:noinline
       func Beta() {} // trailing comment of Beta
       """
-    And the exit code is 0
 
   Scenario: constructors and methods follow their type
     Given a file "shapes.go" with content:
@@ -87,7 +87,8 @@ Feature: sort free-standing functions alphabetically
       func (s Square) Area() float64 { return s.S * s.S }
       """
     When I run "alphasort fix shapes.go"
-    Then the file "shapes.go" now has content:
+    Then the exit code is 0
+    And the file "shapes.go" now has content:
       """
       package shapes
 
@@ -115,7 +116,6 @@ Feature: sort free-standing functions alphabetically
 
       func round(f float64) float64 { return math.Round(f) }
       """
-    And the exit code is 0
 
   Scenario: methods of types declared in another file stay in place
     Given a file "circle_area.go" with content:
@@ -131,7 +131,8 @@ Feature: sort free-standing functions alphabetically
       func align() {}
       """
     When I run "alphasort fix circle_area.go"
-    Then the file "circle_area.go" now has content:
+    Then the exit code is 0
+    And the file "circle_area.go" now has content:
       """
       package shapes
 
@@ -143,7 +144,6 @@ Feature: sort free-standing functions alphabetically
 
       func zoom() {}
       """
-    And the exit code is 0
 
   Scenario: capitalized functions come first
     Given a file "names.go" with content:
@@ -159,7 +159,8 @@ Feature: sort free-standing functions alphabetically
       func Alpha() {}
       """
     When I run "alphasort fix names.go"
-    Then the file "names.go" now has content:
+    Then the exit code is 0
+    And the file "names.go" now has content:
       """
       package names
 
@@ -171,7 +172,6 @@ Feature: sort free-standing functions alphabetically
 
       func zeta() {}
       """
-    And the exit code is 0
 
   Scenario: multi-line function bodies
     Given a file "calc.go" with content:
@@ -191,7 +191,8 @@ Feature: sort free-standing functions alphabetically
       }
       """
     When I run "alphasort fix calc.go"
-    Then the file "calc.go" now has content:
+    Then the exit code is 0
+    And the file "calc.go" now has content:
       """
       package calc
 
@@ -207,7 +208,6 @@ Feature: sort free-standing functions alphabetically
       	return total
       }
       """
-    And the exit code is 0
 
   Scenario: already sorted file
     Given a file "sorted.go" with content:
@@ -219,5 +219,5 @@ Feature: sort free-standing functions alphabetically
       func b() {}
       """
     When I run "alphasort fix sorted.go"
-    Then the file "sorted.go" is unchanged
-    And the exit code is 0
+    Then the exit code is 0
+    And the file "sorted.go" is unchanged

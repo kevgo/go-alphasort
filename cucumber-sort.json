@@ -8,11 +8,11 @@
   "steps": [
     "^a file \".*\" with content:$",
     "^I run \".*\"$",
+    "^the exit code is",
     "^the output is empty$",
     "^the output contains \".*\"$",
     "^the error output contains \".*\"$",
     "^the file \".*\" now has content:$",
-    "^the file \".*\" is unchanged$",
-    "^the exit code is"
+    "^the file \".*\" is unchanged$"
   ]
 }

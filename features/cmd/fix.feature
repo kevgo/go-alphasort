@@ -28,7 +28,8 @@ Feature: "fix" subcommand
       func c() {}
       """
     When I run "alphasort fix unsorted.go sorted.go"
-    Then the output is empty
+    Then the exit code is 0
+    And the output is empty
     And the file "unsorted.go" now has content:
       """
       package demo
@@ -39,7 +40,6 @@ Feature: "fix" subcommand
       """
     And the file "other.go" is unchanged
     And the file "sorted.go" is unchanged
-    And the exit code is 0
 
   Scenario: without arguments, fix all Go files in the current directory and its subdirectories
     Given a file ".hidden/hidden.go" with content:
@@ -88,7 +88,8 @@ Feature: "fix" subcommand
       func a() {}
       """
     When I run "alphasort fix"
-    Then the output is empty
+    Then the exit code is 0
+    And the output is empty
     And the file "pkg/sub/deep.go" now has content:
       """
       package sub
@@ -111,7 +112,6 @@ Feature: "fix" subcommand
     And the file "sorted.go" is unchanged
     And the file "testdata/fixture.go" is unchanged
     And the file "vendor/dep/dep.go" is unchanged
-    And the exit code is 0
 
   Scenario: explicitly given files get fixed even in skipped directories
     Given a file "vendor/dep/dep.go" with content:
@@ -123,7 +123,8 @@ Feature: "fix" subcommand
       func a() {}
       """
     When I run "alphasort fix vendor/dep/dep.go"
-    Then the file "vendor/dep/dep.go" now has content:
+    Then the exit code is 0
+    And the file "vendor/dep/dep.go" now has content:
       """
       package dep
 
@@ -132,7 +133,6 @@ Feature: "fix" subcommand
       func b() {}
       """
     And the file "unsorted.go" is unchanged
-    And the exit code is 0
 
   Scenario: directories are not accepted as arguments
     Given a file "pkg/lib.go" with content:
@@ -144,9 +144,9 @@ Feature: "fix" subcommand
       func a() {}
       """
     When I run "alphasort fix pkg"
-    Then the error output contains "pkg is a directory: please provide files, or no arguments to fix all files"
+    Then the exit code is 2
+    And the error output contains "pkg is a directory: please provide files, or no arguments to fix all files"
     And the file "pkg/lib.go" is unchanged
-    And the exit code is 2
 
   Scenario: invalid Go code in a given file
     Given a file "broken.go" with content:
@@ -156,7 +156,8 @@ Feature: "fix" subcommand
       func b() {
       """
     When I run "alphasort fix broken.go unsorted.go"
-    Then the error output contains "broken.go"
+    Then the exit code is 2
+    And the error output contains "broken.go"
     And the file "unsorted.go" now has content:
       """
       package demo
@@ -166,7 +167,6 @@ Feature: "fix" subcommand
       func b() {}
       """
     And the file "broken.go" is unchanged
-    And the exit code is 2
 
   Scenario: invalid Go code without arguments does not stop the other files from getting fixed
     Given a file "a_broken.go" with content:
@@ -176,7 +176,8 @@ Feature: "fix" subcommand
       func b() {
       """
     When I run "alphasort fix"
-    Then the error output contains "a_broken.go"
+    Then the exit code is 2
+    And the error output contains "a_broken.go"
     And the file "unsorted.go" now has content:
       """
       package demo
@@ -186,15 +187,14 @@ Feature: "fix" subcommand
       func b() {}
       """
     And the file "a_broken.go" is unchanged
-    And the exit code is 2
 
   Scenario: non-existing file
     When I run "alphasort fix zonk.go"
-    Then the error output contains "zonk.go"
-    And the exit code is 2
+    Then the exit code is 2
+    And the error output contains "zonk.go"
 
   Scenario: unknown flag
     When I run "alphasort fix -w unsorted.go"
-    Then the error output contains "unknown flag: -w"
+    Then the exit code is 2
+    And the error output contains "unknown flag: -w"
     And the file "unsorted.go" is unchanged
-    And the exit code is 2
