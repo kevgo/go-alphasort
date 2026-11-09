@@ -6,12 +6,13 @@ Sorts all elements of Golang source code alphabetically.
 
 ```
 go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
-alphasort fix <path> ...   # sort the functions in the given files and directories
-alphasort help             # show help
+alphasort fix          # sort the functions in all Go files in the current directory and its subdirectories
+alphasort fix <files>  # sort the functions in the given files only
+alphasort help         # show help
 ```
 
-`fix` rewrites the files on disk. It processes directories recursively, skipping
-`vendor`, `testdata`, and hidden directories.
+`fix` rewrites the files on disk. Without arguments, it skips `vendor`,
+`testdata`, hidden, and `_`-prefixed directories.
 
 Alphasort reorders the functions and methods in each file:
 

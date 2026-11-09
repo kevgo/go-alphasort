@@ -5,7 +5,7 @@ cuke:  # runs the end-to-end tests (Cucumber scenarios via godog)
 
 fix:  # formats the code and sorts its functions
 	go mod tidy
-	go run ./cmd/alphasort fix .
+	go run ./cmd/alphasort fix
 	gofmt -w .
 
 lint:  # runs the static checks

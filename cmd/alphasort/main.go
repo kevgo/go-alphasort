@@ -13,8 +13,34 @@ import (
 	"github.com/kevgo/go-alphasort/fixer"
 )
 
+// findGoFiles provides all Go files in the current directory and its subdirectories,
+// skipping the directories that the Go tool ignores.
+func findGoFiles() ([]string, error) {
+	result := []string{}
+	err := filepath.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() && path != "." && skipDir(entry.Name()) {
+			return filepath.SkipDir
+		}
+		if isGoFile(entry) {
+			result = append(result, path)
+		}
+		return nil
+	})
+	return result, err
+}
+
 // fixFile sorts the functions in the given file and writes the result back to disk.
 func fixFile(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.IsDir() {
+		return fmt.Errorf("%s is a directory: please provide files, or no arguments to fix all files", path)
+	}
 	src, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -26,34 +52,7 @@ func fixFile(path string) error {
 	if bytes.Equal(src, sorted) {
 		return nil
 	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
 	return os.WriteFile(path, sorted, info.Mode().Perm())
-}
-
-// fixPath sorts the functions in the given file, or in all Go files in the given directory tree.
-func fixPath(root string) error {
-	info, err := os.Stat(root)
-	if err != nil {
-		return err
-	}
-	if !info.IsDir() {
-		return fixFile(root)
-	}
-	return filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() && path != root && skipDir(entry.Name()) {
-			return filepath.SkipDir
-		}
-		if !isGoFile(entry) {
-			return nil
-		}
-		return fixFile(path)
-	})
 }
 
 // isGoFile indicates whether the given directory entry is a Go source file.
@@ -68,15 +67,14 @@ func main() {
 
 // printUsage prints the help text of this tool.
 func printUsage(w io.Writer) {
-	fmt.Fprint(w, `usage: alphasort <command> [path ...]
+	fmt.Fprint(w, `usage: alphasort <command> [file ...]
 
 Sorts free-standing Go functions alphabetically.
 
 Commands:
-  fix   sort the functions in the given files and directories
+  fix   sort the functions in the given files,
+        or in all Go files in the current directory and its subdirectories
   help  show this help
-
-Directories are processed recursively.
 `)
 }
 
@@ -96,20 +94,24 @@ func run(args []string, stdout, stderr io.Writer) int {
 		printUsage(stderr)
 		return 2
 	}
-	paths := args[1:]
-	for _, path := range paths {
-		if strings.HasPrefix(path, "-") {
-			fmt.Fprintf(stderr, "unknown flag: %s\n", path)
+	files := args[1:]
+	for _, file := range files {
+		if strings.HasPrefix(file, "-") {
+			fmt.Fprintf(stderr, "unknown flag: %s\n", file)
 			return 2
 		}
 	}
-	if len(paths) == 0 {
-		fmt.Fprintln(stderr, "please provide the files or directories to fix")
-		return 2
+	if len(files) == 0 {
+		var err error
+		files, err = findGoFiles()
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 2
+		}
 	}
 	exitCode := 0
-	for _, path := range paths {
-		if err := fixPath(path); err != nil {
+	for _, file := range files {
+		if err := fixFile(file); err != nil {
 			fmt.Fprintln(stderr, err)
 			exitCode = 2
 		}
