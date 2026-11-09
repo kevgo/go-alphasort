@@ -23,7 +23,9 @@ stays intact, since Go executes them in source order.
 ## Development
 
 ```
-make test   # all tests (unit and end-to-end)
+make test   # all checks and tests (lint, unit, end-to-end)
+make lint   # only the static checks (go vet, gofmt, go mod tidy, sorted functions)
 make unit   # only the unit tests
 make cuke   # only the end-to-end tests (Cucumber scenarios via godog)
+make fix    # formats the code and sorts its functions
 ```
