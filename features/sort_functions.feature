@@ -13,7 +13,7 @@ Feature: sort free-standing functions alphabetically
 
       func alpha() {}
       """
-    When I run "go-alphasort -w main.go"
+    When I run "alphasort -w main.go"
     Then the exit code is 0
     And the output is empty
     And the file "main.go" now has content:
@@ -42,7 +42,7 @@ Feature: sort free-standing functions alphabetically
       // Alpha does A.
       func Alpha() {}
       """
-    When I run "go-alphasort -w lib.go"
+    When I run "alphasort -w lib.go"
     Then the exit code is 0
     And the file "lib.go" now has content:
       """
@@ -78,7 +78,7 @@ Feature: sort free-standing functions alphabetically
 
       func (s Square) Area() float64 { return s.S * s.S }
       """
-    When I run "go-alphasort -w shapes.go"
+    When I run "alphasort -w shapes.go"
     Then the exit code is 0
     And the file "shapes.go" now has content:
       """
@@ -114,7 +114,7 @@ Feature: sort free-standing functions alphabetically
 
       func Alpha() {}
       """
-    When I run "go-alphasort -w names.go"
+    When I run "alphasort -w names.go"
     Then the exit code is 0
     And the file "names.go" now has content:
       """
@@ -146,7 +146,7 @@ Feature: sort free-standing functions alphabetically
       	return value * 2
       }
       """
-    When I run "go-alphasort -w calc.go"
+    When I run "alphasort -w calc.go"
     Then the exit code is 0
     And the file "calc.go" now has content:
       """
@@ -174,6 +174,6 @@ Feature: sort free-standing functions alphabetically
 
       func b() {}
       """
-    When I run "go-alphasort -w sorted.go"
+    When I run "alphasort -w sorted.go"
     Then the exit code is 0
     And the file "sorted.go" is unchanged

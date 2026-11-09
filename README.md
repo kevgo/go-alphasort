@@ -1,11 +1,12 @@
 # go-alphasort
+
 Sorts all elements of Golang source code alphabetically.
 
 ## Usage
 
 ```
-go install github.com/kevgo/go-alphasort@latest
-go-alphasort [-l] [-w] [path ...]
+go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
+alphasort [-l] [-w] [path ...]
 ```
 
 - `-w`: write the sorted result back to the files

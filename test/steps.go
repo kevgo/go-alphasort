@@ -1,4 +1,4 @@
-// Package test provides the Cucumber step definitions for the end-to-end tests of go-alphasort.
+// Package test provides the Cucumber step definitions for the end-to-end tests of alphasort.
 package test
 
 import (
@@ -12,13 +12,13 @@ import (
 )
 
 // InitializeScenario provides a godog scenario initializer
-// that runs the go-alphasort executable at the given path.
+// that runs the alphasort executable at the given path.
 func InitializeScenario(binPath string) func(*godog.ScenarioContext) {
 	return func(sc *godog.ScenarioContext) {
 		state := &scenarioState{binPath: binPath}
 
 		sc.Before(func(ctx context.Context, _ *godog.Scenario) (context.Context, error) {
-			dir, err := os.MkdirTemp("", "go-alphasort-e2e-")
+			dir, err := os.MkdirTemp("", "alphasort-e2e-")
 			state.dir = dir
 			state.originals = map[string]string{}
 			return ctx, err

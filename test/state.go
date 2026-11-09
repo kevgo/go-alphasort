@@ -10,7 +10,7 @@ import (
 
 // scenarioState contains the state of a single Cucumber scenario.
 type scenarioState struct {
-	binPath   string            // the location of the compiled go-alphasort executable
+	binPath   string            // the location of the compiled alphasort executable
 	dir       string            // the temporary directory in which the scenario runs
 	originals map[string]string // the content of the files created by the scenario
 	stdout    string
@@ -18,11 +18,11 @@ type scenarioState struct {
 	exitCode  int
 }
 
-// run executes the given go-alphasort command in the scenario directory.
+// run executes the given alphasort command in the scenario directory.
 func (s *scenarioState) run(command, input string) error {
 	args := strings.Fields(command)
-	if len(args) == 0 || args[0] != "go-alphasort" {
-		return fmt.Errorf("can only run go-alphasort commands, got %q", command)
+	if len(args) == 0 || args[0] != "alphasort" {
+		return fmt.Errorf("can only run alphasort commands, got %q", command)
 	}
 	cmd := exec.Command(s.binPath, args[1:]...)
 	cmd.Dir = s.dir

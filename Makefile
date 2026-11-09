@@ -5,13 +5,13 @@ cuke:  # runs the end-to-end tests (Cucumber scenarios via godog)
 
 fix:  # formats the code and sorts its functions
 	go mod tidy
-	go run . -w .
+	go run ./cmd/alphasort -w .
 	gofmt -w .
 
 lint:  # runs the static checks
 	go vet ./...
 	go mod tidy -diff
-	files=$$(go run . -l .); if [ -n "$$files" ]; then echo "functions not sorted (run \"make fix\"):"; echo "$$files"; exit 1; fi
+	files=$$(go run ./cmd/alphasort -l .); if [ -n "$$files" ]; then echo "functions not sorted (run \"make fix\"):"; echo "$$files"; exit 1; fi
 
 test: lint unit cuke  # runs all checks and tests
 

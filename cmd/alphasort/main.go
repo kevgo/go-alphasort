@@ -1,4 +1,4 @@
-// go-alphasort sorts the free-standing functions in Go source files alphabetically.
+// Alphasort sorts the free-standing functions in Go source files alphabetically.
 package main
 
 import (
@@ -103,13 +103,13 @@ func processStdin(opts options, stdin io.Reader, stdout io.Writer) error {
 
 // run executes this tool with the given CLI arguments and returns the exit code.
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	flags := flag.NewFlagSet("go-alphasort", flag.ContinueOnError)
+	flags := flag.NewFlagSet("alphasort", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	var opts options
 	flags.BoolVar(&opts.list, "l", false, "list files whose functions are not sorted alphabetically")
 	flags.BoolVar(&opts.write, "w", false, "write the result to the source files instead of STDOUT")
 	flags.Usage = func() {
-		fmt.Fprintln(stderr, "usage: go-alphasort [flags] [path ...]")
+		fmt.Fprintln(stderr, "usage: alphasort [flags] [path ...]")
 		fmt.Fprintln(stderr)
 		fmt.Fprintln(stderr, "Sorts free-standing Go functions alphabetically.")
 		fmt.Fprintln(stderr, "Without paths, reads Go source code from STDIN.")

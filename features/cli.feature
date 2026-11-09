@@ -19,7 +19,7 @@ Feature: command-line interface
       """
 
   Scenario: print the sorted file to STDOUT without modifying it
-    When I run "go-alphasort unsorted.go"
+    When I run "alphasort unsorted.go"
     Then the exit code is 0
     And the output is:
       """
@@ -32,7 +32,7 @@ Feature: command-line interface
     And the file "unsorted.go" is unchanged
 
   Scenario: read from STDIN and write to STDOUT
-    When I run "go-alphasort" with input:
+    When I run "alphasort" with input:
       """
       package demo
       
@@ -51,7 +51,7 @@ Feature: command-line interface
       """
 
   Scenario: list files that need sorting
-    When I run "go-alphasort -l unsorted.go sorted.go"
+    When I run "alphasort -l unsorted.go sorted.go"
     Then the exit code is 0
     And the output is:
       """
@@ -60,7 +60,7 @@ Feature: command-line interface
     And the file "unsorted.go" is unchanged
 
   Scenario: list and fix files at the same time
-    When I run "go-alphasort -l -w unsorted.go sorted.go"
+    When I run "alphasort -l -w unsorted.go sorted.go"
     Then the exit code is 0
     And the output is:
       """
@@ -114,7 +114,7 @@ Feature: command-line interface
       
       func a() {}
       """
-    When I run "go-alphasort -l -w ."
+    When I run "alphasort -l -w ."
     Then the exit code is 0
     And the output is:
       """
@@ -141,7 +141,7 @@ Feature: command-line interface
       
       func b() {
       """
-    When I run "go-alphasort -w broken.go unsorted.go"
+    When I run "alphasort -w broken.go unsorted.go"
     Then the exit code is 2
     And the error output contains "broken.go"
     And the file "broken.go" is unchanged
@@ -155,12 +155,12 @@ Feature: command-line interface
       """
 
   Scenario: non-existing file
-    When I run "go-alphasort zonk.go"
+    When I run "alphasort zonk.go"
     Then the exit code is 2
     And the error output contains "zonk.go"
 
   Scenario: writing is not possible when reading from STDIN
-    When I run "go-alphasort -w" with input:
+    When I run "alphasort -w" with input:
       """
       package demo
       """
@@ -168,6 +168,6 @@ Feature: command-line interface
     And the error output contains "cannot use -w with standard input"
 
   Scenario: help
-    When I run "go-alphasort -h"
+    When I run "alphasort -h"
     Then the exit code is 0
-    And the error output contains "usage: go-alphasort [flags] [path ...]"
+    And the error output contains "usage: alphasort [flags] [path ...]"

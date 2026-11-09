@@ -1,4 +1,4 @@
-package main_test
+package alphasort_test
 
 import (
 	"os/exec"
@@ -10,13 +10,13 @@ import (
 )
 
 func TestFeatures(t *testing.T) {
-	binPath := filepath.Join(t.TempDir(), "go-alphasort")
-	build := exec.Command("go", "build", "-o", binPath, ".")
+	binPath := filepath.Join(t.TempDir(), "alphasort")
+	build := exec.Command("go", "build", "-o", binPath, "./cmd/alphasort")
 	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("cannot compile go-alphasort: %v\n%s", err, output)
+		t.Fatalf("cannot compile alphasort: %v\n%s", err, output)
 	}
 	suite := godog.TestSuite{
-		Name:                "go-alphasort",
+		Name:                "alphasort",
 		ScenarioInitializer: test.InitializeScenario(binPath),
 		Options: &godog.Options{
 			Format:   "progress",
