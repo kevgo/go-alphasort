@@ -4,17 +4,17 @@ Feature: command-line interface
     Given a file "unsorted.go" with content:
       """
       package demo
-
+      
       func b() {}
-
+      
       func a() {}
       """
     And a file "sorted.go" with content:
       """
       package demo
-
+      
       func a() {}
-
+      
       func b() {}
       """
 
@@ -35,9 +35,9 @@ Feature: command-line interface
     And the file "unsorted.go" now has content:
       """
       package demo
-
+      
       func a() {}
-
+      
       func b() {}
       """
     And the file "sorted.go" is unchanged
@@ -46,9 +46,9 @@ Feature: command-line interface
     When I run "alphasort check" with input:
       """
       package demo
-
+      
       func zulu() {}
-
+      
       func alpha() {}
       """
     Then the exit code is 0
@@ -61,18 +61,18 @@ Feature: command-line interface
     When I run "alphasort fix" with input:
       """
       package demo
-
+      
       func zulu() {}
-
+      
       func alpha() {}
       """
     Then the exit code is 0
     And the output is:
       """
       package demo
-
+      
       func alpha() {}
-
+      
       func zulu() {}
       """
 
@@ -80,9 +80,9 @@ Feature: command-line interface
     Given a file "pkg/sub/deep.go" with content:
       """
       package sub
-
+      
       func y() {}
-
+      
       func x() {}
       """
     And a file "pkg/notes.txt" with content:
@@ -93,25 +93,25 @@ Feature: command-line interface
     And a file "vendor/dep/dep.go" with content:
       """
       package dep
-
+      
       func b() {}
-
+      
       func a() {}
       """
     And a file "testdata/fixture.go" with content:
       """
       package fixture
-
+      
       func b() {}
-
+      
       func a() {}
       """
     And a file ".hidden/hidden.go" with content:
       """
       package hidden
-
+      
       func b() {}
-
+      
       func a() {}
       """
     When I run "alphasort check ."
@@ -126,9 +126,9 @@ Feature: command-line interface
     And the file "pkg/sub/deep.go" now has content:
       """
       package sub
-
+      
       func x() {}
-
+      
       func y() {}
       """
     And the file "pkg/notes.txt" is unchanged
@@ -140,7 +140,7 @@ Feature: command-line interface
     Given a file "broken.go" with content:
       """
       package broken
-
+      
       func b() {
       """
     When I run "alphasort fix broken.go unsorted.go"
@@ -150,9 +150,9 @@ Feature: command-line interface
     And the file "unsorted.go" now has content:
       """
       package demo
-
+      
       func a() {}
-
+      
       func b() {}
       """
 

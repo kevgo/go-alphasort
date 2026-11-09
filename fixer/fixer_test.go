@@ -140,16 +140,16 @@ func alpha() {}
 func beta() {}
 `,
 		},
-		"methods stay in place": {
+		"methods move behind their type, sorted alphabetically": {
 			give: `package a
 
 type T struct{}
 
 func zulu() {}
 
-func (t T) Alpha() {}
+func (t *T) beta() {}
 
-func (t *T) Beta() {}
+func (t T) Alpha() {}
 
 func alpha() {}
 `,
@@ -157,14 +157,246 @@ func alpha() {}
 
 type T struct{}
 
-func alpha() {}
-
 func (t T) Alpha() {}
 
-func (t *T) Beta() {}
+func (t *T) beta() {}
+
+func alpha() {}
 
 func zulu() {}
 `,
+		},
+		"constructor comes first, then the methods": {
+			give: `package a
+
+func helper() {}
+
+// Beta does B.
+func (c *Counter) Beta() {}
+
+type Counter struct{ n int }
+
+func (c *Counter) Alpha() {}
+
+// NewCounter creates a Counter.
+func NewCounter() *Counter { return &Counter{} }
+
+func aaa() {}
+`,
+			want: `package a
+
+func aaa() {}
+
+type Counter struct{ n int }
+
+// NewCounter creates a Counter.
+func NewCounter() *Counter { return &Counter{} }
+
+func (c *Counter) Alpha() {}
+
+// Beta does B.
+func (c *Counter) Beta() {}
+
+func helper() {}
+`,
+		},
+		"constructor without methods": {
+			give: `package a
+
+func helper() {}
+
+type T int
+
+func NewT() T { return 0 }
+`,
+			want: `package a
+
+func helper() {}
+
+type T int
+
+func NewT() T { return 0 }
+`,
+		},
+		"multiple types": {
+			give: `package a
+
+type B struct{}
+
+type A struct{}
+
+func (A) M() {}
+
+func NewB() B { return B{} }
+
+func NewA() A { return A{} }
+
+func (B) M() {}
+`,
+			want: `package a
+
+type B struct{}
+
+func NewB() B { return B{} }
+
+func (B) M() {}
+
+type A struct{}
+
+func NewA() A { return A{} }
+
+func (A) M() {}
+`,
+		},
+		"grouped type declaration": {
+			give: `package a
+
+type (
+	A struct{}
+	B struct{}
+)
+
+func (B) M() {}
+
+func NewB() B { return B{} }
+
+func (A) M() {}
+`,
+			want: `package a
+
+type (
+	A struct{}
+	B struct{}
+)
+
+func (A) M() {}
+
+func NewB() B { return B{} }
+
+func (B) M() {}
+`,
+		},
+		"generic types": {
+			give: `package a
+
+type List[T any] struct{ items []T }
+
+func (l *List[T]) Push(item T) {}
+
+func NewList[T any]() *List[T] { return &List[T]{} }
+
+func (l List[T]) Len() int { return len(l.items) }
+`,
+			want: `package a
+
+type List[T any] struct{ items []T }
+
+func NewList[T any]() *List[T] { return &List[T]{} }
+
+func (l List[T]) Len() int { return len(l.items) }
+
+func (l *List[T]) Push(item T) {}
+`,
+		},
+		"methods and constructors of types declared in other files stay in place": {
+			give: `package a
+
+func (o *Other) Zulu() {}
+
+func beta() {}
+
+func (o *Other) Alpha() {}
+
+func NewOther() *Other { return nil }
+`,
+			want: `package a
+
+func (o *Other) Zulu() {}
+
+func NewOther() *Other { return nil }
+
+func (o *Other) Alpha() {}
+
+func beta() {}
+`,
+		},
+		"only an exact New + type name is a constructor": {
+			give: `package a
+
+type T struct{}
+
+func NewTFromString(s string) T { return T{} }
+
+func New() T { return T{} }
+
+func NewT() T { return T{} }
+`,
+			want: `package a
+
+type T struct{}
+
+func NewT() T { return T{} }
+
+func New() T { return T{} }
+
+func NewTFromString(s string) T { return T{} }
+`,
+		},
+		"methods before the first type declaration": {
+			give: `package a
+
+func (T) B() {}
+
+func (T) A() {}
+
+type T struct{}
+`,
+			want: `package a
+
+type T struct{}
+
+func (T) A() {}
+
+func (T) B() {}
+`,
+		},
+		"floating comments and trailing comments around types": {
+			give: `package a
+
+type T struct{} // the T type
+
+// --- helpers ---
+
+func (T) M() {} // method M
+`,
+			want: `package a
+
+type T struct{} // the T type
+
+func (T) M() {} // method M
+
+// --- helpers ---
+`,
+		},
+		"single-line spacing between methods is preserved": {
+			give: `package a
+
+type T struct{}
+
+func (T) A() {}
+func (T) B() {}
+`,
+			want: `package a
+
+type T struct{}
+
+func (T) A() {}
+func (T) B() {}
+`,
+		},
+		"CRLF line endings with moved methods": {
+			give: "package a\r\n\r\nfunc (T) M() {}\r\n\r\ntype T struct{}\r\n",
+			want: "package a\r\n\r\ntype T struct{}\r\n\r\nfunc (T) M() {}\r\n",
 		},
 		"non-function declarations stay in place": {
 			give: `package a
@@ -374,6 +606,13 @@ func beta() {} // b`,
 			}
 			if string(have) != tt.want {
 				t.Errorf("mismatch\n--- HAVE ---\n%s\n--- WANT ---\n%s", have, tt.want)
+			}
+			again, err := fixer.SortFuncs("test.go", have)
+			if err != nil {
+				t.Fatalf("unexpected error on second run: %v", err)
+			}
+			if string(again) != string(have) {
+				t.Errorf("second run changed the result\n--- FIRST ---\n%s\n--- SECOND ---\n%s", have, again)
 			}
 		})
 	}

@@ -57,12 +57,17 @@ Feature: sort free-standing functions alphabetically
       func Beta() {} // trailing comment of Beta
       """
 
-  Scenario: methods and other declarations keep their position
+  Scenario: constructors and methods follow their type
     Given a file "shapes.go" with content:
       """
       package shapes
 
       import "math"
+
+      func round(f float64) float64 { return math.Round(f) }
+
+      // Scale enlarges the circle.
+      func (c *Circle) Scale(f float64) { c.R *= f }
 
       type Circle struct{ R float64 }
 
@@ -72,9 +77,12 @@ Feature: sort free-standing functions alphabetically
 
       const Unit = 1.0
 
+      // NewCircle creates a circle.
       func NewCircle(r float64) Circle { return Circle{r} }
 
       type Square struct{ S float64 }
+
+      func describe(a float64) string { return "" }
 
       func (s Square) Area() float64 { return s.S * s.S }
       """
@@ -86,19 +94,55 @@ Feature: sort free-standing functions alphabetically
 
       import "math"
 
+      func describe(a float64) string { return "" }
+
       type Circle struct{ R float64 }
 
+      // NewCircle creates a circle.
       func NewCircle(r float64) Circle { return Circle{r} }
 
       func (c Circle) Area() float64 { return math.Pi * c.R * c.R }
 
-      const Unit = 1.0
+      // Scale enlarges the circle.
+      func (c *Circle) Scale(f float64) { c.R *= f }
 
-      func NewSquare(s float64) Square { return Square{s} }
+      const Unit = 1.0
 
       type Square struct{ S float64 }
 
+      func NewSquare(s float64) Square { return Square{s} }
+
       func (s Square) Area() float64 { return s.S * s.S }
+
+      func round(f float64) float64 { return math.Round(f) }
+      """
+
+  Scenario: methods of types declared in another file stay in place
+    Given a file "circle_area.go" with content:
+      """
+      package shapes
+
+      func (c Circle) Perimeter() float64 { return 0 }
+
+      func zoom() {}
+
+      func (c Circle) Area() float64 { return 0 }
+
+      func align() {}
+      """
+    When I run "alphasort fix circle_area.go"
+    Then the exit code is 0
+    And the file "circle_area.go" now has content:
+      """
+      package shapes
+
+      func (c Circle) Perimeter() float64 { return 0 }
+
+      func align() {}
+
+      func (c Circle) Area() float64 { return 0 }
+
+      func zoom() {}
       """
 
   Scenario: capitalized functions come first
