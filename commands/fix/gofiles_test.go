@@ -2,11 +2,11 @@ package fix_test
 
 import (
 	"io/fs"
-	"slices"
 	"testing"
 	"testing/fstest"
 
 	"github.com/kevgo/go-alphasort/commands/fix"
+	"github.com/shoenig/test/must"
 )
 
 func TestFind(t *testing.T) {
@@ -30,29 +30,21 @@ func TestFind(t *testing.T) {
 		"pkg/sub/.cache/cache.go": {},
 	}
 	have, err := fix.Find(fsys)
-	if err != nil {
-		t.Fatal(err)
-	}
+	must.NoError(t, err)
 	want := []string{
 		"main.go",
 		"main_test.go",
 		"pkg/lib.go",
 		"pkg/sub/deep.go",
 	}
-	if !slices.Equal(have, want) {
-		t.Errorf("mismatch\nhave: %q\nwant: %q", have, want)
-	}
+	must.Eq(t, want, have)
 }
 
 func TestFindEmpty(t *testing.T) {
 	t.Parallel()
 	have, err := fix.Find(fstest.MapFS{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(have) != 0 {
-		t.Errorf("expected no files, got %q", have)
-	}
+	must.NoError(t, err)
+	must.SliceEmpty(t, have)
 }
 
 func TestIsGoFile(t *testing.T) {
@@ -78,15 +70,9 @@ func TestIsGoFile(t *testing.T) {
 		"plaindir":     false,
 	}
 	entries, err := fs.ReadDir(fsys, ".")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(entries) != len(tests) {
-		t.Fatalf("expected %d entries, got %d", len(tests), len(entries))
-	}
+	must.NoError(t, err)
+	must.SliceLen(t, len(tests), entries)
 	for _, entry := range entries {
-		if have, want := fix.IsGoFile(entry), tests[entry.Name()]; have != want {
-			t.Errorf("IsGoFile(%q): have %v, want %v", entry.Name(), have, want)
-		}
+		must.Eq(t, tests[entry.Name()], fix.IsGoFile(entry), must.Sprintf("IsGoFile(%q)", entry.Name()))
 	}
 }

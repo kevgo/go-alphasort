@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/kevgo/go-alphasort/commands/fix"
+	"github.com/shoenig/test/must"
 )
 
 func TestSortFuncs(t *testing.T) {
@@ -601,19 +602,11 @@ func beta() {} // b`,
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			have, err := fix.Sort("test.go", []byte(tt.give))
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if string(have) != tt.want {
-				t.Errorf("mismatch\n--- HAVE ---\n%s\n--- WANT ---\n%s", have, tt.want)
-			}
+			must.NoError(t, err)
+			must.Eq(t, tt.want, string(have))
 			again, err := fix.Sort("test.go", have)
-			if err != nil {
-				t.Fatalf("unexpected error on second run: %v", err)
-			}
-			if string(again) != string(have) {
-				t.Errorf("second run changed the result\n--- FIRST ---\n%s\n--- SECOND ---\n%s", have, again)
-			}
+			must.NoError(t, err, must.Sprint("second run"))
+			must.Eq(t, string(have), string(again), must.Sprint("second run changed the result"))
 		})
 	}
 }
@@ -636,22 +629,14 @@ var x = 1
 func a() {}
 `
 	once, err := fix.Sort("test.go", []byte(give))
-	if err != nil {
-		t.Fatal(err)
-	}
+	must.NoError(t, err)
 	twice, err := fix.Sort("test.go", once)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(once) != string(twice) {
-		t.Errorf("not idempotent\n--- FIRST ---\n%s\n--- SECOND ---\n%s", once, twice)
-	}
+	must.NoError(t, err)
+	must.Eq(t, string(once), string(twice), must.Sprint("not idempotent"))
 }
 
 func TestSortFuncsInvalidSource(t *testing.T) {
 	t.Parallel()
 	_, err := fix.Sort("test.go", []byte("package a\n\nfunc {"))
-	if err == nil {
-		t.Fatal("expected an error for invalid Go code")
-	}
+	must.Error(t, err)
 }
