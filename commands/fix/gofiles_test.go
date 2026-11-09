@@ -1,4 +1,4 @@
-package gofiles_test
+package fix_test
 
 import (
 	"io/fs"
@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/kevgo/go-alphasort/gofiles"
+	"github.com/kevgo/go-alphasort/commands/fix"
 )
 
 func TestFind(t *testing.T) {
@@ -29,7 +29,7 @@ func TestFind(t *testing.T) {
 		"pkg/testdata/golden.go":  {},
 		"pkg/sub/.cache/cache.go": {},
 	}
-	have, err := gofiles.Find(fsys)
+	have, err := fix.Find(fsys)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestFind(t *testing.T) {
 
 func TestFindEmpty(t *testing.T) {
 	t.Parallel()
-	have, err := gofiles.Find(fstest.MapFS{})
+	have, err := fix.Find(fstest.MapFS{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestIsGoFile(t *testing.T) {
 		t.Fatalf("expected %d entries, got %d", len(tests), len(entries))
 	}
 	for _, entry := range entries {
-		if have, want := gofiles.IsGoFile(entry), tests[entry.Name()]; have != want {
+		if have, want := fix.IsGoFile(entry), tests[entry.Name()]; have != want {
 			t.Errorf("IsGoFile(%q): have %v, want %v", entry.Name(), have, want)
 		}
 	}

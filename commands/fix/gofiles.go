@@ -1,5 +1,4 @@
-// Package gofiles finds Go source files.
-package gofiles
+package fix
 
 import (
 	"io/fs"

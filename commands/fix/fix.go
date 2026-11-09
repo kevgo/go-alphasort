@@ -8,8 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/kevgo/go-alphasort/gofiles"
 )
 
 // Run executes the "fix" subcommand with the given arguments and returns the exit code.
@@ -23,7 +21,7 @@ func Run(args []string, stderr io.Writer) int {
 		}
 	}
 	if len(files) == 0 {
-		found, err := gofiles.Find(os.DirFS("."))
+		found, err := Find(os.DirFS("."))
 		if err != nil {
 			fmt.Fprintln(stderr, err)
 			return 2
