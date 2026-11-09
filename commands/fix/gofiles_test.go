@@ -72,7 +72,9 @@ func TestIsGoFile(t *testing.T) {
 	entries, err := fs.ReadDir(fsys, ".")
 	must.NoError(t, err)
 	must.SliceLen(t, len(tests), entries)
-	for _, entry := range entries {
-		must.Eq(t, tests[entry.Name()], fix.IsGoFile(entry), must.Sprintf("IsGoFile(%q)", entry.Name()))
+	for _, give := range entries {
+		have := fix.IsGoFile(give)
+		want := tests[give.Name()]
+		must.Eq(t, want, have, must.Sprintf("IsGoFile(%q)", give.Name()))
 	}
 }
