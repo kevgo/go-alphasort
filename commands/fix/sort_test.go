@@ -1,9 +1,9 @@
-package fixer_test
+package fix_test
 
 import (
 	"testing"
 
-	"github.com/kevgo/go-alphasort/fixer"
+	"github.com/kevgo/go-alphasort/commands/fix"
 )
 
 func TestSortFuncs(t *testing.T) {
@@ -600,14 +600,14 @@ func beta() {} // b`,
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			have, err := fixer.SortFuncs("test.go", []byte(tt.give))
+			have, err := fix.SortFuncs("test.go", []byte(tt.give))
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 			if string(have) != tt.want {
 				t.Errorf("mismatch\n--- HAVE ---\n%s\n--- WANT ---\n%s", have, tt.want)
 			}
-			again, err := fixer.SortFuncs("test.go", have)
+			again, err := fix.SortFuncs("test.go", have)
 			if err != nil {
 				t.Fatalf("unexpected error on second run: %v", err)
 			}
@@ -635,11 +635,11 @@ var x = 1
 
 func a() {}
 `
-	once, err := fixer.SortFuncs("test.go", []byte(give))
+	once, err := fix.SortFuncs("test.go", []byte(give))
 	if err != nil {
 		t.Fatal(err)
 	}
-	twice, err := fixer.SortFuncs("test.go", once)
+	twice, err := fix.SortFuncs("test.go", once)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -650,7 +650,7 @@ func a() {}
 
 func TestSortFuncsInvalidSource(t *testing.T) {
 	t.Parallel()
-	_, err := fixer.SortFuncs("test.go", []byte("package a\n\nfunc {"))
+	_, err := fix.SortFuncs("test.go", []byte("package a\n\nfunc {"))
 	if err == nil {
 		t.Fatal("expected an error for invalid Go code")
 	}

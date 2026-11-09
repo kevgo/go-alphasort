@@ -1,5 +1,4 @@
-// Package fixer reorders the functions and methods in Go source code.
-package fixer
+package fix
 
 import (
 	"fmt"
