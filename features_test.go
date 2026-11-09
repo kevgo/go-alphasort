@@ -27,7 +27,7 @@ func TestFeatures(t *testing.T) {
 		Name:                "go-alphasort",
 		ScenarioInitializer: initializeScenario,
 		Options: &godog.Options{
-			Format:   "pretty",
+			Format:   "progress",
 			Paths:    []string{"features"},
 			Strict:   true,
 			TestingT: t,

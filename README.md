@@ -25,5 +25,5 @@ stays intact, since Go executes them in source order.
 ```
 make test   # all tests (unit and end-to-end)
 make unit   # only the unit tests
-make e2e    # only the end-to-end tests (Cucumber scenarios via godog)
+make cuke   # only the end-to-end tests (Cucumber scenarios via godog)
 ```
