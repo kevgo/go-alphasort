@@ -10,7 +10,7 @@ import (
 func Print(w io.Writer) {
 	fmt.Fprint(w, `usage: alphasort <command> [file ...]
 
-Sorts free-standing Go functions alphabetically.
+Sorts Go code alphabetically.
 
 Commands:
   fix   sort the functions in the given files,
