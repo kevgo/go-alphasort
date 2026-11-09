@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/kevgo/cucumber-sort/refs/heads/main/docs/schema.json",
+  "include": [],
+  "exclude": [],
+  "record": false,
+  "fail-fast": false,
+  "keep-order": [],
+  "steps": [
+    "^a file \".*\" with content:$",
+    "^I run \".*\"$",
+    "^the output is empty$",
+    "^the output contains \".*\"$",
+    "^the error output contains \".*\"$",
+    "^the file \".*\" is unchanged$",
+    "^the file \".*\" now has content:$",
+    "^the exit code is"
+  ]
+}

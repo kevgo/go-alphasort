@@ -4,7 +4,7 @@ Sorts all elements of Golang source code alphabetically.
 
 ## Usage
 
-```
+```text
 go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
 alphasort fix          # sort the functions in all Go files in the current directory and its subdirectories
 alphasort fix <files>  # sort the functions in the given files only
@@ -33,7 +33,7 @@ order.
 
 ## Development
 
-```
+```text
 make test   # all checks and tests (lint, unit, end-to-end)
 make lint   # only the static checks (go vet, go mod tidy)
 make unit   # only the unit tests
