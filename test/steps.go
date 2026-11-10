@@ -3,12 +3,11 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/cucumber/godog"
+	"github.com/shoenig/test/must"
 )
 
 func InitializeScenario(binPath string) func(*godog.ScenarioContext) {
@@ -38,57 +37,55 @@ func InitializeScenario(binPath string) func(*godog.ScenarioContext) {
 
 		sc.Step(`^I run "([^"]+)"$`, state.run)
 
-		sc.Step(`^the exit code is (\d+)$`, func(want int) error {
-			if state.exitCode != want {
-				return fmt.Errorf("expected exit code %d but got %d\nSTDOUT:\n%s\nSTDERR:\n%s", want, state.exitCode, state.stdout, state.stderr)
-			}
-			return nil
+		sc.Step(`^the exit code is (\d+)$`, func(ctx context.Context, want int) {
+			must.Eq(t(ctx), want, state.exitCode, must.Sprintf("STDOUT:\n%s\nSTDERR:\n%s", state.stdout, state.stderr))
 		})
 
-		sc.Step(`^the file "([^"]+)" now has content:$`, func(name string, want *godog.DocString) error {
+		sc.Step(`^the file "([^"]+)" now has content:$`, func(ctx context.Context, name string, want *godog.DocString) {
 			have, err := os.ReadFile(filepath.Join(state.dir, name))
-			if err != nil {
-				return err
-			}
-			return compare("file "+name, string(have), want.Content+"\n")
+			must.NoError(t(ctx), err)
+			must.Eq(t(ctx), want.Content+"\n", string(have), must.Sprint("file "+name))
 		})
 
-		sc.Step(`^the file "([^"]+)" is unchanged$`, func(name string) error {
+		sc.Step(`^the file "([^"]+)" is unchanged$`, func(ctx context.Context, name string) {
 			have, err := os.ReadFile(filepath.Join(state.dir, name))
-			if err != nil {
-				return err
-			}
-			return compare("file "+name, string(have), state.originals[name])
+			must.NoError(t(ctx), err)
+			must.Eq(t(ctx), state.originals[name], string(have), must.Sprint("file "+name))
 		})
 
-		sc.Step(`^the output contains "([^"]+)"$`, func(want string) error {
-			if !strings.Contains(state.stdout, want) {
-				return fmt.Errorf("expected STDOUT to contain %q but it was:\n%s", want, state.stdout)
-			}
-			return nil
+		sc.Step(`^the output contains "([^"]+)"$`, func(ctx context.Context, want string) {
+			must.StrContains(t(ctx), state.stdout, want, must.Sprint("STDOUT"))
 		})
 
-		sc.Step(`^the output is:$`, func(want *godog.DocString) error {
-			return compare("STDOUT", state.stdout, want.Content+"\n")
+		sc.Step(`^the output is:$`, func(ctx context.Context, want *godog.DocString) {
+			must.Eq(t(ctx), want.Content+"\n", state.stdout, must.Sprint("STDOUT"))
 		})
 
-		sc.Step(`^the output is empty$`, func() error {
-			return compare("STDOUT", state.stdout, "")
+		sc.Step(`^the output is empty$`, func(ctx context.Context) {
+			must.Eq(t(ctx), "", state.stdout, must.Sprint("STDOUT"))
 		})
 
-		sc.Step(`^the error output contains "([^"]+)"$`, func(want string) error {
-			if !strings.Contains(state.stderr, want) {
-				return fmt.Errorf("expected STDERR to contain %q but it was:\n%s", want, state.stderr)
-			}
-			return nil
+		sc.Step(`^the error output contains "([^"]+)"$`, func(ctx context.Context, want string) {
+			must.StrContains(t(ctx), state.stderr, want, must.Sprint("STDERR"))
 		})
 	}
 }
 
-// compare provides an error describing the difference if the given texts differ.
-func compare(what, have, want string) error {
-	if have == want {
-		return nil
-	}
-	return fmt.Errorf("unexpected %s\n--- HAVE ---\n%s\n--- WANT ---\n%s", what, have, want)
+// t provides the testing.T of the current scenario in a form usable by the must library.
+func t(ctx context.Context) must.T {
+	return mustT{godog.T(ctx)}
 }
+
+// mustT adapts godog.TestingT to the must.T interface.
+type mustT struct {
+	godog.TestingT
+}
+
+// Fatalf records the failure message so that godog displays it as the reason why the step failed.
+// godog's own Fatalf only logs the message and reports a generic "fail called on TestingT" error.
+func (t mustT) Fatalf(format string, args ...any) {
+	t.Errorf(format, args...)
+	t.FailNow()
+}
+
+func (mustT) Helper() {}
