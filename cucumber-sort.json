@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/kevgo/cucumber-sort/refs/heads/main/docs/schema.json",
   "include": [],
   "exclude": [],
-  "record": false,
+  "record": true,
   "fail-fast": false,
   "keep-order": [],
   "steps": [
