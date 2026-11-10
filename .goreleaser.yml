@@ -25,7 +25,7 @@ builds:
       - arm64
 
 archives:
-  - formats: [tar.gz]
+  - formats: [tar.xz]
     name_template: >-
       alphasort_
       {{- if eq .Os "darwin" }}macos{{ else }}{{ .Os }}{{ end }}_
