@@ -1,8 +1,8 @@
-// Release-notes prints the section of CHANGELOG.md that belongs to the given release tag.
+// Prints the section matching the given tage from CHANGELOG.md.
 //
 // Usage: go run ./tools/release-notes <tag>
 //
-// A tag like "v1.2.3" selects the section with the heading "## 1.2.3".
+// Tag "v1.2.3" selects section "## 1.2.3".
 package main
 
 import (
