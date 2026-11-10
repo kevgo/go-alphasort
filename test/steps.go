@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/cucumber/godog"
 	"github.com/shoenig/test/must"
@@ -57,6 +58,10 @@ func InitializeScenario(binPath string) func(*godog.ScenarioContext) {
 			must.StrContains(t(ctx), state.stdout, want, must.Sprint("STDOUT"))
 		})
 
+		sc.Step(`^the output matches "([^"]+)"$`, func(ctx context.Context, pattern string) {
+			must.RegexMatch(t(ctx), regexp.MustCompile(pattern), state.stdout, must.Sprint("STDOUT"))
+		})
+
 		sc.Step(`^the output is:$`, func(ctx context.Context, want *godog.DocString) {
 			must.Eq(t(ctx), want.Content+"\n", state.stdout, must.Sprint("STDOUT"))
 		})
@@ -67,6 +72,10 @@ func InitializeScenario(binPath string) func(*godog.ScenarioContext) {
 
 		sc.Step(`^the error output contains "([^"]+)"$`, func(ctx context.Context, want string) {
 			must.StrContains(t(ctx), state.stderr, want, must.Sprint("STDERR"))
+		})
+
+		sc.Step(`^the error output is empty$`, func(ctx context.Context) {
+			must.Eq(t(ctx), "", state.stderr, must.Sprint("STDERR"))
 		})
 	}
 }

@@ -16,7 +16,8 @@ Sorts all elements of Golang source code alphabetically.
 - Struct fields get sorted case insensitive.
   Structs containing blank (`_`) fields keep their order,
   since they usually serve as padding.
-- Map literals with identifier or string keys get sorted case insensitive by key.
+- Map literals with identifier
+  or string keys get sorted case insensitive by key.
   - Struct instantiations and map literals in
     which more than one value calls a function
     or uses a channel keep their order, since Go evaluates them in source order.
@@ -30,6 +31,7 @@ Sorts all elements of Golang source code alphabetically.
 ```sh
 alphasort fix          # format all files
 alphasort fix <files>  # format the given files
+alphasort version      # show the installed version
 ```
 
 ## Installation
