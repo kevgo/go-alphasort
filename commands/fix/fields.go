@@ -273,17 +273,9 @@ func sortFields(fset *token.FileSet, file *ast.File, src []byte, info packageInf
 	for _, group := range file.Comments {
 		e.comments = append(e.comments, group.List...)
 	}
-	typeNames := map[*ast.StructType]string{}
 	ast.Inspect(file, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.TypeSpec:
-			if structType, ok := n.Type.(*ast.StructType); ok {
-				typeNames[structType] = n.Name.Name
-			}
-		case *ast.StructType:
-			if !info.keepsFieldOrder(n, typeNames[n]) {
-				e.addStruct(n)
-			}
+		if structType, ok := node.(*ast.StructType); ok {
+			e.addStruct(structType)
 		}
 		return true
 	})

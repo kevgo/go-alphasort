@@ -345,7 +345,7 @@ var z = T{a: len(s), b: next(), c: int64(1), d: MyInt(2), e: []byte("x"), f: fun
 type MyInt int
 `,
 		},
-		"structs instantiated with positional fields keep their order": {
+		"structs instantiated with positional fields get sorted as well": {
 			give: `package a
 
 type Point struct {
@@ -361,53 +361,21 @@ var tests = []struct {
 }{
 	{1, 2},
 }
-
-type Pair struct {
-	b int
-	a int
-}
-
-var pairs = map[string]Pair{"one": {1, 2}}
 `,
 			want: `package a
 
 type Point struct {
-	y int
 	x int
+	y int
 }
 
 var p = Point{1, 2}
 
 var tests = []struct {
-	want int
 	give int
+	want int
 }{
 	{1, 2},
-}
-
-type Pair struct {
-	b int
-	a int
-}
-
-var pairs = map[string]Pair{"one": {1, 2}}
-`,
-		},
-		"identical anonymous structs elsewhere also keep their order when one is instantiated positionally": {
-			give: `package a
-
-var x struct{ b, a int }
-
-func f() {
-	x = struct{ b, a int }{1, 2}
-}
-`,
-			want: `package a
-
-var x struct{ b, a int }
-
-func f() {
-	x = struct{ b, a int }{1, 2}
 }
 `,
 		},
@@ -469,16 +437,15 @@ type T struct {
 	}
 }
 
-func TestSortFieldsPositionalInOtherFile(t *testing.T) {
+func TestSortFieldsTypesInOtherFile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	writeFile(t, dir, "point.go", "package a\n\ntype Point struct {\n\ty int\n\tx int\n}\n\ntype Size struct {\n\th int\n\tw int\n}\n")
-	writeFile(t, dir, "point_test.go", "package a\n\nvar origin = Point{0, 0}\n\nvar items = Items{{1, 2}}\n")
-	writeFile(t, dir, "items.go", "package a\n\ntype Items []Size\n")
-	pkg := fix.ScanDir(dir)
-	have, err := fix.Sort("point.go", []byte("package a\n\ntype Point struct {\n\ty int\n\tx int\n}\n\ntype Size struct {\n\th int\n\tw int\n}\n"), pkg)
+	writeFile(t, dir, "names.go", "package a\n\ntype Names map[int]string\n")
+	give := "package a\n\nvar n = Names{z: \"z\", a: \"a\"}\n\nvar p = Point{y: 1, x: 2}\n"
+	writeFile(t, dir, "lookup.go", give)
+	have, err := fix.Sort("lookup.go", []byte(give), fix.ScanDir(dir))
 	must.NoError(t, err)
-	must.Eq(t, "package a\n\ntype Point struct {\n\ty int\n\tx int\n}\n\ntype Size struct {\n\th int\n\tw int\n}\n", string(have))
+	must.Eq(t, "package a\n\nvar n = Names{z: \"z\", a: \"a\"}\n\nvar p = Point{x: 2, y: 1}\n", string(have))
 }
 
 func writeFile(t *testing.T, dir, name, content string) {

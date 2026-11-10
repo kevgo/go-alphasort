@@ -51,7 +51,7 @@ Feature: sort struct fields alphabetically
       }
       """
 
-  Scenario: structs instantiated with positional fields in another file of the package keep their field order
+  Scenario: structs instantiated with positional fields in another file get sorted as well
     Given a file "point.go" with content:
       """
       package geo
@@ -69,7 +69,17 @@ Feature: sort struct fields alphabetically
       """
     When I run "alphasort fix point.go"
     Then the exit code is 0
-    And the file "point.go" is unchanged
+    And the output is empty
+    And the file "point.go" now has content:
+      """
+      package geo
+
+      type Point struct {
+      	x int
+      	y int
+      }
+      """
+    And the file "point_test.go" is unchanged
 
   Scenario: capitalized fields come first
     Given a file "names.go" with content:
@@ -374,7 +384,7 @@ Feature: sort struct fields alphabetically
       type MyInt int
       """
 
-  Scenario: structs instantiated with positional fields in the same file keep their field order
+  Scenario: structs instantiated with positional fields in the same file get sorted as well
     Given a file "positional.go" with content:
       """
       package positional
@@ -392,34 +402,28 @@ Feature: sort struct fields alphabetically
       }{
       	{1, 2},
       }
-
-      type Pair struct {
-      	b int
-      	a int
-      }
-
-      var pairs = map[string]Pair{"one": {1, 2}}
       """
     When I run "alphasort fix positional.go"
     Then the exit code is 0
     And the output is empty
-    And the file "positional.go" is unchanged
-
-  Scenario: identical anonymous structs keep their field order when one of them is instantiated with positional fields
-    Given a file "anonymous.go" with content:
+    And the file "positional.go" now has content:
       """
-      package anonymous
+      package positional
 
-      var x struct{ b, a int }
+      type Point struct {
+      	x int
+      	y int
+      }
 
-      func f() {
-      	x = struct{ b, a int }{1, 2}
+      var p = Point{1, 2}
+
+      var tests = []struct {
+      	give int
+      	want int
+      }{
+      	{1, 2},
       }
       """
-    When I run "alphasort fix anonymous.go"
-    Then the exit code is 0
-    And the output is empty
-    And the file "anonymous.go" is unchanged
 
   Scenario: struct fields and functions get sorted together
     Given a file "both.go" with content:
@@ -475,68 +479,29 @@ Feature: sort struct fields alphabetically
       }
       """
 
-  Scenario: structs instantiated with positional fields through a slice type in another file keep their field order
-    Given a file "items.go" with content:
+  Scenario: literals of map types declared in another file keep their order
+    Given a file "lookup.go" with content:
       """
-      package geo
+      package lookup
 
-      type Items []Size
-      """
-    And a file "items_test.go" with content:
-      """
-      package geo
+      var n = Names{z: "z", a: "a"}
 
-      var items = Items{{1, 2}}
+      var p = Point{y: 1, x: 2}
       """
-    And a file "size.go" with content:
+    And a file "names.go" with content:
       """
-      package geo
+      package lookup
 
-      type Size struct {
-      	w int
-      	h int
-      }
+      type Names map[int]string
       """
-    When I run "alphasort fix size.go"
-    Then the exit code is 0
-    And the file "size.go" is unchanged
-
-  Scenario: without arguments, positional instantiations only protect structs of the same package
-    Given a file "a/point.go" with content:
-      """
-      package a
-
-      type Point struct {
-      	y int
-      	x int
-      }
-      """
-    And a file "a/point_test.go" with content:
-      """
-      package a
-
-      var origin = Point{0, 0}
-      """
-    And a file "b/point.go" with content:
-      """
-      package b
-
-      type Point struct {
-      	y int
-      	x int
-      }
-      """
-    When I run "alphasort fix"
+    When I run "alphasort fix lookup.go"
     Then the exit code is 0
     And the output is empty
-    And the file "b/point.go" now has content:
+    And the file "lookup.go" now has content:
       """
-      package b
+      package lookup
 
-      type Point struct {
-      	x int
-      	y int
-      }
+      var n = Names{z: "z", a: "a"}
+
+      var p = Point{x: 2, y: 1}
       """
-    And the file "a/point.go" is unchanged
-    And the file "a/point_test.go" is unchanged
