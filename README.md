@@ -1,5 +1,7 @@
 # Go-alphasort
 
+[![linux](https://github.com/kevgo/go-alphasort/actions/workflows/linux.yml/badge.svg)](https://github.com/kevgo/go-alphasort/actions/workflows/linux.yml)
+
 Sorts all elements of Golang source code alphabetically.
 
 - Constructor functions (`New` + type name) and the methods of
