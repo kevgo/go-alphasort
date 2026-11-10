@@ -1,6 +1,7 @@
 package fix
 
 import (
+	"cmp"
 	"go/ast"
 	"go/token"
 	"slices"
@@ -15,6 +16,15 @@ func compareEdits(a, b edit) int {
 		return a.start - b.start
 	}
 	return b.end - a.end
+}
+
+// compareNames orders the given names alphabetically, ignoring case.
+// Names that differ only in case are ordered by their exact spelling to keep the result deterministic.
+func compareNames(a, b string) int {
+	if result := cmp.Compare(strings.ToLower(a), strings.ToLower(b)); result != 0 {
+		return result
+	}
+	return strings.Compare(a, b)
 }
 
 // edit describes a part of the source code that gets replaced.
@@ -95,7 +105,7 @@ func (e *editor) addNames(field *ast.Field) {
 	for i, name := range field.Names {
 		names[i] = name.Name
 	}
-	if slices.IsSorted(names) {
+	if slices.IsSortedFunc(names, compareNames) {
 		return
 	}
 	start, end := field.Names[0].Pos(), field.Names[len(field.Names)-1].End()
@@ -104,7 +114,7 @@ func (e *editor) addNames(field *ast.Field) {
 			return
 		}
 	}
-	slices.Sort(names)
+	slices.SortFunc(names, compareNames)
 	e.edits = append(e.edits, edit{
 		start:  e.tokFile.Offset(start),
 		end:    e.tokFile.Offset(end),
@@ -238,7 +248,7 @@ func fieldName(field *ast.Field) string {
 		for i, name := range field.Names {
 			names[i] = name.Name
 		}
-		return slices.Min(names)
+		return slices.MinFunc(names, compareNames)
 	}
 	expr := field.Type
 	for {
@@ -351,13 +361,13 @@ func (info typeInfo) mayHaveSideEffects(expr ast.Expr) bool {
 	return result
 }
 
-// sortOrder provides the indexes of the given keys in alphabetical order of these keys.
+// sortOrder provides the indexes of the given keys in case-insensitive alphabetical order of these keys.
 func sortOrder(keys []string) []int {
 	order := make([]int, len(keys))
 	for i := range order {
 		order[i] = i
 	}
-	slices.SortStableFunc(order, func(a, b int) int { return strings.Compare(keys[a], keys[b]) })
+	slices.SortStableFunc(order, func(a, b int) int { return compareNames(keys[a], keys[b]) })
 	return order
 }
 

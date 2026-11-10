@@ -14,7 +14,6 @@ func TestFind(t *testing.T) {
 	fsys := fstest.MapFS{
 		".git/hooks/hook.go":      {},
 		".hidden.go":              {},
-		"README.md":               {},
 		"_build/build.go":         {},
 		"dir.go/file.txt":         {},
 		"main.go":                 {},
@@ -26,6 +25,7 @@ func TestFind(t *testing.T) {
 		"pkg/sub/deep.go":         {},
 		"pkg/testdata/golden.go":  {},
 		"pkg/vendor/nested.go":    {},
+		"README.md":               {},
 		"testdata/fixture.go":     {},
 		"vendor/dep/dep.go":       {},
 	}

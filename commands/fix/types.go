@@ -10,8 +10,8 @@ import (
 func declaredTypes(file *ast.File) typeInfo {
 	result := typeInfo{
 		nonTypes:   map[string]bool{},
-		typeScopes: map[string][]scope{},
 		types:      map[string][]ast.Expr{},
+		typeScopes: map[string][]scope{},
 	}
 	declare := func(names ...*ast.Ident) {
 		for _, name := range names {
@@ -92,8 +92,8 @@ type scope struct {
 // typeInfo describes the types declared in a file.
 type typeInfo struct {
 	nonTypes   map[string]bool       // names that the file declares as functions, variables, constants, parameters, or results in any scope
-	typeScopes map[string][]scope    // where in the file the types declared in it are visible, by type name
 	types      map[string][]ast.Expr // the definitions of the types declared in the file, by type name
+	typeScopes map[string][]scope    // where in the file the types declared in it are visible, by type name
 }
 
 // isArray indicates whether the given type expression is known to describe an array or slice.
