@@ -11,8 +11,6 @@ import (
 	"github.com/cucumber/godog"
 )
 
-// InitializeScenario provides a godog scenario initializer
-// that runs the alphasort executable at the given path.
 func InitializeScenario(binPath string) func(*godog.ScenarioContext) {
 	return func(sc *godog.ScenarioContext) {
 		state := &scenarioState{binPath: binPath}
