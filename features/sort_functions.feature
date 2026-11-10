@@ -232,11 +232,11 @@ Feature: sort free-standing functions alphabetically
       	run(config)
       }
 
+      func run(config Config) {}
+
       func loadConfig() Config { return NewConfig() }
 
       func (c Config) Valid() bool { return c.Name != "" }
-
-      func run(config Config) {}
 
       type Config struct {
       	Name string
@@ -257,9 +257,9 @@ Feature: sort free-standing functions alphabetically
       	run(config)
       }
 
-      func loadConfig() Config { return NewConfig() }
-
       func run(config Config) {}
+
+      func loadConfig() Config { return NewConfig() }
 
       type Config struct {
       	Debug bool
