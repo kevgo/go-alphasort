@@ -13,9 +13,10 @@ func Print(w io.Writer) {
 Sorts Go code alphabetically.
 
 Commands:
-  fix   sort the functions in the given files,
-        or in all Go files in the current directory and its subdirectories
-  help  show this help
+  fix      sort the functions in the given files,
+           or in all Go files in the current directory and its subdirectories
+  help     show this help
+  version  show the version of alphasort
 `)
 }
 

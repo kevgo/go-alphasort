@@ -6,3 +6,4 @@
   - except in files called "main.go" because those are script files ordered based on call flows
 - sorts struct fields alphabetically
 - releases for Linux, macOS, and Windows for ARM64 and Intel64
+- `alphasort version` displays the version of alphasort

@@ -11,7 +11,9 @@
     "^the exit code is",
     "^the output is empty$",
     "^the output contains \".*\"$",
+    "^the output matches \".*\"$",
     "^the error output contains \".*\"$",
+    "^the error output is empty$",
     "^the file \".*\" now has content:$",
     "^the file \".*\" is unchanged$"
   ]
