@@ -1,8 +1,6 @@
 package fix_test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/kevgo/go-alphasort/commands/fix"
@@ -15,24 +13,40 @@ func TestSortFields(t *testing.T) {
 		give string
 		want string
 	}{
-		"struct definition": {
+		"CRLF line endings": {
+			give: "package a\r\n\r\ntype T struct {\r\n\t// b\r\n\tb int\r\n\ta int\r\n}\r\n",
+			want: "package a\r\n\r\ntype T struct {\r\n\ta int\r\n\t// b\r\n\tb int\r\n}\r\n",
+		},
+		"array literals keep their order": {
 			give: `package a
 
-type T struct {
-	zulu  int
-	Bravo string
-	alpha bool
-	Alpha bool
-}
+const (
+	z = iota
+	a
+)
+
+var s = [...]string{z: "z", a: "a"}
+
+var t = []string{z: "z", a: "a"}
+
+type Levels [2]string
+
+var l = Levels{z: "z", a: "a"}
 `,
 			want: `package a
 
-type T struct {
-	Alpha bool
-	Bravo string
-	alpha bool
-	zulu  int
-}
+const (
+	z = iota
+	a
+)
+
+var s = [...]string{z: "z", a: "a"}
+
+var t = []string{z: "z", a: "a"}
+
+type Levels [2]string
+
+var l = Levels{z: "z", a: "a"}
 `,
 		},
 		"comments move with their field": {
@@ -54,6 +68,28 @@ type T struct {
 
 	// zulu is Z.
 	zulu int // trailing zulu
+}
+`,
+		},
+		"embedded fields sort by their type name": {
+			give: `package a
+
+import "sync"
+
+type T struct {
+	name string
+	*sync.Mutex
+	Base
+}
+`,
+			want: `package a
+
+import "sync"
+
+type T struct {
+	Base
+	*sync.Mutex
+	name string
 }
 `,
 		},
@@ -85,34 +121,152 @@ type T struct {
 }
 `,
 		},
-		"realigns the fields": {
+		"instantiations with several side effects keep their order": {
 			give: `package a
 
-type T struct {
-	zulu    int
-	charlie string
+var x = T{b: next(), a: next()}
 
-	alpha bool
+var y = T{b: <-ch, a: <-ch}
+
+var z = T{b: next(), a: len(s), c: int64(1), d: MyInt(2), e: []byte("x"), f: func() int { return next() }}
+
+type MyInt int
+`,
+			want: `package a
+
+var x = T{b: next(), a: next()}
+
+var y = T{b: <-ch, a: <-ch}
+
+var z = T{a: len(s), b: next(), c: int64(1), d: MyInt(2), e: []byte("x"), f: func() int { return next() }}
+
+type MyInt int
+`,
+		},
+		"keyed instantiations": {
+			give: `package a
+
+var x = T{zulu: 1, Bravo: 2, alpha: 3}
+
+var y = &T{
+	zulu: 1, // trailing zulu
+	// doc of alpha
+	alpha: 3,
+}
+
+type T struct {
+	Bravo int
+	alpha int
+	zulu  int
 }
 `,
 			want: `package a
 
-type T struct {
-	alpha   bool
-	charlie string
+var x = T{Bravo: 2, alpha: 3, zulu: 1}
 
-	zulu int
+var y = &T{
+	// doc of alpha
+	alpha: 3,
+	zulu:  1, // trailing zulu
+}
+
+type T struct {
+	Bravo int
+	alpha int
+	zulu  int
 }
 `,
 		},
-		"single-line struct": {
+		"map literals": {
 			give: `package a
 
-type T struct{ b int; a string }
+import "os"
+
+const (
+	z = iota
+	a
+)
+
+var m = map[int]string{z: "z", a: "a"}
+
+type Names map[int]string
+
+var n = Names{z: "z", a: "a"}
+
+type Tables []map[int]string
+
+var l = Tables{
+	{z: "z", a: "a"},
+}
+
+var s = map[string]int{
+	"zulu":  1, // trailing zulu
+	"Bravo": 2,
+	"alpha": 3,
+}
+
+var r = map[string]int{` + "`b`" + `: 1, "a": 2}
+
+var q = map[any]int{os.Stdout: 1, os.Stderr: 2}
 `,
 			want: `package a
 
-type T struct{ a string; b int }
+import "os"
+
+const (
+	z = iota
+	a
+)
+
+var m = map[int]string{a: "a", z: "z"}
+
+type Names map[int]string
+
+var n = Names{a: "a", z: "z"}
+
+type Tables []map[int]string
+
+var l = Tables{
+	{a: "a", z: "z"},
+}
+
+var s = map[string]int{
+	"Bravo": 2,
+	"alpha": 3,
+	"zulu":  1, // trailing zulu
+}
+
+var r = map[string]int{"a": 2, ` + "`b`" + `: 1}
+
+var q = map[any]int{os.Stderr: 2, os.Stdout: 1}
+`,
+		},
+		"map literals with other keys keep their order": {
+			give: `package a
+
+var m = map[int]string{2: "two", 1: "one"}
+
+var p = map[[2]int]string{{2, 2}: "b", {1, 1}: "a"}
+
+var c = map[string]int{key(): 1, "a": 2}
+`,
+			want: `package a
+
+var m = map[int]string{2: "two", 1: "one"}
+
+var p = map[[2]int]string{{2, 2}: "b", {1, 1}: "a"}
+
+var c = map[string]int{key(): 1, "a": 2}
+`,
+		},
+		"map values with several side effects keep their order": {
+			give: `package a
+
+var m = map[string]int{"b": next(), "a": next()}
+`,
+			want: `package a
+
+var m = map[string]int{"b": next(), "a": next()}
 `,
 		},
 		"names in a multi-name field": {
@@ -130,32 +284,6 @@ type T struct {
 	z    int
 }
 `,
-		},
-		"embedded fields sort by their type name": {
-			give: `package a
-
-import "sync"
-
-type T struct {
-	name string
-	*sync.Mutex
-	Base
-}
-`,
-			want: `package a
-
-import "sync"
-
-type T struct {
-	Base
-	*sync.Mutex
-	name string
-}
-`,
-		},
-		"tags move with their field": {
-			give: "package a\n\ntype T struct {\n\tZ int    `json:\"z\"`\n\tA string `json:\"a\"`\n}\n",
-			want: "package a\n\ntype T struct {\n\tA string `json:\"a\"`\n\tZ int    `json:\"z\"`\n}\n",
 		},
 		"nested and anonymous structs": {
 			give: `package a
@@ -195,58 +323,6 @@ func f(cfg struct{ a, b int }) {
 }
 `,
 		},
-		"structs with blank fields keep their order": {
-			give: `package a
-
-type T struct {
-	b int32
-	_ [4]byte
-	a int64
-}
-`,
-			want: `package a
-
-type T struct {
-	b int32
-	_ [4]byte
-	a int64
-}
-`,
-		},
-		"keyed instantiations": {
-			give: `package a
-
-var x = T{zulu: 1, Bravo: 2, alpha: 3}
-
-var y = &T{
-	zulu: 1, // trailing zulu
-	// doc of alpha
-	alpha: 3,
-}
-
-type T struct {
-	Bravo int
-	alpha int
-	zulu  int
-}
-`,
-			want: `package a
-
-var x = T{Bravo: 2, alpha: 3, zulu: 1}
-
-var y = &T{
-	// doc of alpha
-	alpha: 3,
-	zulu:  1, // trailing zulu
-}
-
-type T struct {
-	Bravo int
-	alpha int
-	zulu  int
-}
-`,
-		},
 		"nested and elided instantiations": {
 			give: `package a
 
@@ -279,70 +355,94 @@ var z = other.Config{Alpha: 2, Zulu: 1}
 var w = struct{ a, b int }{a: 2, b: 1}
 `,
 		},
-		"map and array literals keep their order": {
+		"not gofmt-formatted input does not get formatted": {
 			give: `package a
 
-const (
-	z = iota
-	a
-)
-
-var m = map[int]string{z: "z", a: "a"}
-
-var s = [...]string{z: "z", a: "a"}
-
-type Names map[int]string
-
-var n = Names{z: "z", a: "a"}
-
-type Tables []map[int]string
-
-var l = Tables{
-	{z: "z", a: "a"},
+type T struct {
+  b   int
+  a string
 }
 `,
 			want: `package a
 
-const (
-	z = iota
-	a
-)
-
-var m = map[int]string{z: "z", a: "a"}
-
-var s = [...]string{z: "z", a: "a"}
-
-type Names map[int]string
-
-var n = Names{z: "z", a: "a"}
-
-type Tables []map[int]string
-
-var l = Tables{
-	{z: "z", a: "a"},
+type T struct {
+  a string
+  b   int
 }
 `,
 		},
-		"instantiations with several side effects keep their order": {
+		"realigns the fields": {
 			give: `package a
 
-var x = T{b: next(), a: next()}
+type T struct {
+	zulu    int
+	charlie string
 
-var y = T{b: <-ch, a: <-ch}
-
-var z = T{b: next(), a: len(s), c: int64(1), d: MyInt(2), e: []byte("x"), f: func() int { return next() }}
-
-type MyInt int
+	alpha bool
+}
 `,
 			want: `package a
 
-var x = T{b: next(), a: next()}
+type T struct {
+	alpha   bool
+	charlie string
 
-var y = T{b: <-ch, a: <-ch}
+	zulu int
+}
+`,
+		},
+		"single-line struct": {
+			give: `package a
 
-var z = T{a: len(s), b: next(), c: int64(1), d: MyInt(2), e: []byte("x"), f: func() int { return next() }}
+type T struct{ b int; a string }
+`,
+			want: `package a
 
-type MyInt int
+type T struct{ a string; b int }
+`,
+		},
+		"struct definition": {
+			give: `package a
+
+type T struct {
+	zulu  int
+	Bravo string
+	alpha bool
+	Alpha bool
+}
+`,
+			want: `package a
+
+type T struct {
+	Alpha bool
+	Bravo string
+	alpha bool
+	zulu  int
+}
+`,
+		},
+		"struct fields and functions together": {
+			give: `package a
+
+func zulu() T { return T{b: 1, a: 2} }
+
+func alpha() {}
+
+type T struct {
+	b int
+	a int
+}
+`,
+			want: `package a
+
+func alpha() {}
+
+func zulu() T { return T{a: 2, b: 1} }
+
+type T struct {
+	a int
+	b int
+}
 `,
 		},
 		"structs instantiated with positional fields get sorted as well": {
@@ -379,76 +479,38 @@ var tests = []struct {
 }
 `,
 		},
-		"struct fields and functions together": {
-			give: `package a
-
-func zulu() T { return T{b: 1, a: 2} }
-
-func alpha() {}
-
-type T struct {
-	b int
-	a int
-}
-`,
-			want: `package a
-
-func alpha() {}
-
-func zulu() T { return T{a: 2, b: 1} }
-
-type T struct {
-	a int
-	b int
-}
-`,
-		},
-		"not gofmt-formatted input does not get formatted": {
+		"structs with blank fields keep their order": {
 			give: `package a
 
 type T struct {
-  b   int
-  a string
+	b int32
+	_ [4]byte
+	a int64
 }
 `,
 			want: `package a
 
 type T struct {
-  a string
-  b   int
+	b int32
+	_ [4]byte
+	a int64
 }
 `,
 		},
-		"CRLF line endings": {
-			give: "package a\r\n\r\ntype T struct {\r\n\t// b\r\n\tb int\r\n\ta int\r\n}\r\n",
-			want: "package a\r\n\r\ntype T struct {\r\n\ta int\r\n\t// b\r\n\tb int\r\n}\r\n",
+		"tags move with their field": {
+			give: "package a\n\ntype T struct {\n\tZ int    `json:\"z\"`\n\tA string `json:\"a\"`\n}\n",
+			want: "package a\n\ntype T struct {\n\tA string `json:\"a\"`\n\tZ int    `json:\"z\"`\n}\n",
 		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			have, err := fix.Sort("test.go", []byte(tt.give), fix.Package{})
+			have, err := fix.Sort("test.go", []byte(tt.give))
 			must.NoError(t, err)
 			must.Eq(t, tt.want, string(have))
-			again, err := fix.Sort("test.go", have, fix.Package{})
+			again, err := fix.Sort("test.go", have)
 			must.NoError(t, err, must.Sprint("second run"))
 			must.Eq(t, string(have), string(again), must.Sprint("second run changed the result"))
 		})
 	}
-}
-
-func TestSortFieldsTypesInOtherFile(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	writeFile(t, dir, "names.go", "package a\n\ntype Names map[int]string\n")
-	give := "package a\n\nvar n = Names{z: \"z\", a: \"a\"}\n\nvar p = Point{y: 1, x: 2}\n"
-	writeFile(t, dir, "lookup.go", give)
-	have, err := fix.Sort("lookup.go", []byte(give), fix.ScanDir(dir))
-	must.NoError(t, err)
-	must.Eq(t, "package a\n\nvar n = Names{z: \"z\", a: \"a\"}\n\nvar p = Point{x: 2, y: 1}\n", string(have))
-}
-
-func writeFile(t *testing.T, dir, name, content string) {
-	t.Helper()
-	must.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(content), 0o600))
 }

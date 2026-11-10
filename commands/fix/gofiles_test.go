@@ -12,22 +12,22 @@ import (
 func TestFind(t *testing.T) {
 	t.Parallel()
 	fsys := fstest.MapFS{
+		".git/hooks/hook.go":      {},
+		".hidden.go":              {},
+		"README.md":               {},
+		"_build/build.go":         {},
+		"dir.go/file.txt":         {},
 		"main.go":                 {},
 		"main_test.go":            {},
-		"README.md":               {},
-		".hidden.go":              {},
-		"dir.go/file.txt":         {},
-		"pkg/lib.go":              {},
-		"pkg/sub/deep.go":         {},
-		"pkg/notes.txt":           {},
-		"pkg/vendor/nested.go":    {},
-		"vendor/dep/dep.go":       {},
-		"testdata/fixture.go":     {},
-		".git/hooks/hook.go":      {},
-		"_build/build.go":         {},
 		"pkg/_internal/x.go":      {},
-		"pkg/testdata/golden.go":  {},
+		"pkg/lib.go":              {},
+		"pkg/notes.txt":           {},
 		"pkg/sub/.cache/cache.go": {},
+		"pkg/sub/deep.go":         {},
+		"pkg/testdata/golden.go":  {},
+		"pkg/vendor/nested.go":    {},
+		"testdata/fixture.go":     {},
+		"vendor/dep/dep.go":       {},
 	}
 	have, err := fix.Find(fsys)
 	must.NoError(t, err)
@@ -50,23 +50,23 @@ func TestFindEmpty(t *testing.T) {
 func TestIsGoFile(t *testing.T) {
 	t.Parallel()
 	fsys := fstest.MapFS{
+		".hidden.go":    {},
+		"dir.go/x.txt":  {},
+		"file.go.txt":   {},
+		"go":            {},
 		"main.go":       {},
 		"main_test.go":  {},
-		".hidden.go":    {},
 		"notes.txt":     {},
-		"go":            {},
-		"file.go.txt":   {},
-		"dir.go/x.txt":  {},
 		"plaindir/x.go": {},
 	}
 	tests := map[string]bool{
+		".hidden.go":   false,
+		"dir.go":       false,
+		"file.go.txt":  false,
+		"go":           false,
 		"main.go":      true,
 		"main_test.go": true,
-		".hidden.go":   false,
 		"notes.txt":    false,
-		"go":           false,
-		"file.go.txt":  false,
-		"dir.go":       false,
 		"plaindir":     false,
 	}
 	entries, err := fs.ReadDir(fsys, ".")

@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -27,7 +28,7 @@ type edit struct {
 type editor struct {
 	comments []*ast.Comment // all comments in the file, in source order
 	edits    []edit         // sorted by start, enclosing edits before the edits they contain
-	info     packageInfo
+	info     typeInfo
 	src      string
 	tokFile  *token.File
 }
@@ -56,7 +57,7 @@ func (e *editor) addList(items []listItem, order []int) {
 	})
 }
 
-// addLiteral registers the edits that sort the keyed elements of the given composite literal.
+// addLiteral registers the edits that sort the keyed elements of the given struct or map literal.
 func (e *editor) addLiteral(lit *ast.CompositeLit) {
 	if len(lit.Elts) < 2 {
 		return
@@ -68,11 +69,11 @@ func (e *editor) addLiteral(lit *ast.CompositeLit) {
 		if !ok {
 			return
 		}
-		key, ok := kv.Key.(*ast.Ident)
+		key, ok := literalKey(kv.Key)
 		if !ok {
 			return
 		}
-		keys[i] = key.Name
+		keys[i] = key
 		if e.info.mayHaveSideEffects(kv.Value) {
 			sideEffects++
 		}
@@ -260,9 +261,46 @@ func fieldName(field *ast.Field) string {
 	}
 }
 
+// literalKey provides the text by which to sort the given key of a struct or map literal.
+// It supports identifiers, qualified identifiers, and string literals.
+func literalKey(key ast.Expr) (string, bool) {
+	switch k := key.(type) {
+	case *ast.Ident:
+		return k.Name, true
+	case *ast.SelectorExpr:
+		if pkg, ok := k.X.(*ast.Ident); ok {
+			return pkg.Name + "." + k.Sel.Name, true
+		}
+	case *ast.BasicLit:
+		if k.Kind == token.STRING {
+			text, err := strconv.Unquote(k.Value)
+			return text, err == nil
+		}
+	}
+	return "", false
+}
+
+// isConversion indicates whether a call of the given expression is a type conversion or a call of a side-effect free builtin function.
+func (info typeInfo) isConversion(fun ast.Expr) bool {
+	switch f := fun.(type) {
+	case *ast.Ident:
+		return pureBuiltins[f.Name] || len(info.types[f.Name]) > 0
+	case *ast.ParenExpr:
+		return info.isConversion(f.X)
+	case *ast.IndexExpr:
+		return info.isConversion(f.X)
+	case *ast.IndexListExpr:
+		return info.isConversion(f.X)
+	case *ast.StarExpr, *ast.ArrayType, *ast.MapType, *ast.ChanType, *ast.FuncType, *ast.InterfaceType, *ast.StructType:
+		return true
+	}
+	return false
+}
+
 // sortFields provides the given source code with the fields of its struct types
 // and the keyed elements of its struct instantiations sorted alphabetically.
-func sortFields(fset *token.FileSet, file *ast.File, src []byte, info packageInfo) string {
+func sortFields(fset *token.FileSet, file *ast.File, src []byte) string {
+	info := declaredTypes(file)
 	tokFile := fset.File(file.Pos())
 	e := editor{
 		comments: []*ast.Comment{},
@@ -280,7 +318,7 @@ func sortFields(fset *token.FileSet, file *ast.File, src []byte, info packageInf
 		return true
 	})
 	walkLiterals(file, info, func(lit *ast.CompositeLit, typ ast.Expr) {
-		if !info.isNonStruct(typ) {
+		if !info.isArray(typ) {
 			e.addLiteral(lit)
 		}
 	})
@@ -288,25 +326,8 @@ func sortFields(fset *token.FileSet, file *ast.File, src []byte, info packageInf
 	return e.text(0, len(src))
 }
 
-// isConversion indicates whether a call of the given expression is a type conversion or a call of a side-effect free builtin function.
-func (info packageInfo) isConversion(fun ast.Expr) bool {
-	switch f := fun.(type) {
-	case *ast.Ident:
-		return pureBuiltins[f.Name] || len(info.types[f.Name]) > 0
-	case *ast.ParenExpr:
-		return info.isConversion(f.X)
-	case *ast.IndexExpr:
-		return info.isConversion(f.X)
-	case *ast.IndexListExpr:
-		return info.isConversion(f.X)
-	case *ast.StarExpr, *ast.ArrayType, *ast.MapType, *ast.ChanType, *ast.FuncType, *ast.InterfaceType, *ast.StructType:
-		return true
-	}
-	return false
-}
-
 // mayHaveSideEffects indicates whether evaluating the given expression might call functions or communicate over channels.
-func (info packageInfo) mayHaveSideEffects(expr ast.Expr) bool {
+func (info typeInfo) mayHaveSideEffects(expr ast.Expr) bool {
 	result := false
 	ast.Inspect(expr, func(node ast.Node) bool {
 		switch n := node.(type) {
@@ -338,9 +359,9 @@ func sortOrder(keys []string) []int {
 
 // pureBuiltins contains the predeclared functions and types whose calls have no side effects.
 var pureBuiltins = map[string]bool{
-	"any": true, "bool": true, "byte": true, "cap": true, "complex": true, "complex64": true, "complex128": true,
-	"error": true, "float32": true, "float64": true, "imag": true, "int": true, "int8": true, "int16": true,
-	"int32": true, "int64": true, "len": true, "make": true, "max": true, "min": true, "new": true, "real": true,
-	"rune": true, "string": true, "uint": true, "uint8": true, "uint16": true, "uint32": true, "uint64": true,
+	"any": true, "bool": true, "byte": true, "cap": true, "complex": true, "complex128": true, "complex64": true,
+	"error": true, "float32": true, "float64": true, "imag": true, "int": true, "int16": true, "int32": true,
+	"int64": true, "int8": true, "len": true, "make": true, "max": true, "min": true, "new": true, "real": true,
+	"rune": true, "string": true, "uint": true, "uint16": true, "uint32": true, "uint64": true, "uint8": true,
 	"uintptr": true,
 }

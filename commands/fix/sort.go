@@ -12,16 +12,15 @@ import (
 )
 
 // Sort provides the given Go source code with its elements sorted alphabetically:
-// the fields of struct types and struct instantiations, and the top-level functions and methods.
-// The given package contains the other files of the package that the given file belongs to.
+// the fields of struct types, the keyed elements of struct and map literals, and the top-level functions and methods.
 // If the given source code is formatted with gofmt, the result is as well.
-func Sort(filename string, src []byte, pkg Package) ([]byte, error) {
+func Sort(filename string, src []byte) ([]byte, error) {
 	fset := token.NewFileSet()
 	file, err := parse(fset, filename, src)
 	if err != nil {
 		return nil, err
 	}
-	output := []byte(sortFields(fset, file, src, pkg.with(filename, file).analyze()))
+	output := []byte(sortFields(fset, file, src))
 	if !bytes.Equal(output, src) {
 		fset = token.NewFileSet()
 		file, err = parse(fset, filename, output)

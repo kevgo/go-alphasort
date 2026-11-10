@@ -326,34 +326,73 @@ Feature: sort struct fields alphabetically
       var w = struct{ a, b int }{a: 2, b: 1}
       """
 
-  Scenario: map and array literals keep their order
+  Scenario: map literals with identifier or string keys get sorted
     Given a file "lookup.go" with content:
       """
       package lookup
+
+      type Names map[int]string
 
       const (
       	z = iota
       	a
       )
 
-      var m = map[int]string{z: "z", a: "a"}
-
-      var s = [...]string{z: "z", a: "a"}
-
-      type Names map[int]string
-
       var n = Names{z: "z", a: "a"}
 
-      type Tables []map[int]string
-
-      var l = Tables{
-      	{z: "z", a: "a"},
+      var s = map[string]int{
+      	"zulu":  1, // trailing zulu
+      	"Bravo": 2,
+      	"alpha": 3,
       }
+
+      var t = []map[string]bool{{"b": true, "a": false}}
       """
     When I run "alphasort fix lookup.go"
     Then the exit code is 0
     And the output is empty
-    And the file "lookup.go" is unchanged
+    And the file "lookup.go" now has content:
+      """
+      package lookup
+
+      type Names map[int]string
+
+      const (
+      	z = iota
+      	a
+      )
+
+      var n = Names{a: "a", z: "z"}
+
+      var s = map[string]int{
+      	"Bravo": 2,
+      	"alpha": 3,
+      	"zulu":  1, // trailing zulu
+      }
+
+      var t = []map[string]bool{{"a": false, "b": true}}
+      """
+
+  Scenario: array literals, map literals with other keys, and map literals with several side effects keep their order
+    Given a file "keep.go" with content:
+      """
+      package keep
+
+      const (
+      	z = iota
+      	a
+      )
+
+      var s = [...]string{z: "z", a: "a"}
+
+      var m = map[int]string{2: "two", 1: "one"}
+
+      var e = map[string]int{"b": next(), "a": next()}
+      """
+    When I run "alphasort fix keep.go"
+    Then the exit code is 0
+    And the output is empty
+    And the file "keep.go" is unchanged
 
   Scenario: instantiations with more than one side effect keep their order
     Given a file "effects.go" with content:
@@ -477,31 +516,4 @@ Feature: sort struct fields alphabetically
         a string
         b   int
       }
-      """
-
-  Scenario: literals of map types declared in another file keep their order
-    Given a file "lookup.go" with content:
-      """
-      package lookup
-
-      var n = Names{z: "z", a: "a"}
-
-      var p = Point{y: 1, x: 2}
-      """
-    And a file "names.go" with content:
-      """
-      package lookup
-
-      type Names map[int]string
-      """
-    When I run "alphasort fix lookup.go"
-    Then the exit code is 0
-    And the output is empty
-    And the file "lookup.go" now has content:
-      """
-      package lookup
-
-      var n = Names{z: "z", a: "a"}
-
-      var p = Point{x: 2, y: 1}
       """

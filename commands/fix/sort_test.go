@@ -13,6 +13,14 @@ func TestSortFuncs(t *testing.T) {
 		give string
 		want string
 	}{
+		"CRLF line endings": {
+			give: "package a\r\n\r\n// b\r\nfunc b() {}\r\n\r\nfunc a() {}\r\n",
+			want: "package a\r\n\r\nfunc a() {}\r\n\r\n// b\r\nfunc b() {}\r\n",
+		},
+		"CRLF line endings with moved methods": {
+			give: "package a\r\n\r\nfunc (T) M() {}\r\n\r\ntype T struct{}\r\n",
+			want: "package a\r\n\r\ntype T struct{}\r\n\r\nfunc (T) M() {}\r\n",
+		},
 		"already sorted": {
 			give: `package a
 
@@ -27,66 +35,68 @@ func alpha() {}
 func beta() {}
 `,
 		},
-		"no functions": {
-			give: `package a
+		"build constraint and package doc stay in place": {
+			give: `//go:build linux
 
-var x = 1
+// Package a does things.
+package a
+
+func beta() {}
+
+func alpha() {}
 `,
-			want: `package a
+			want: `//go:build linux
 
-var x = 1
+// Package a does things.
+package a
+
+func alpha() {}
+
+func beta() {}
 `,
 		},
-		"single function": {
-			give: `package a
-
-func only() {}
-`,
-			want: `package a
-
-func only() {}
-`,
-		},
-		"reverse order": {
+		"byte order puts capitalized functions first": {
 			give: `package a
 
 func charlie() {}
 
-func beta() {}
+func Beta() {}
 
 func alpha() {}
+
+func Alpha2() {}
 `,
 			want: `package a
 
-func alpha() {}
+func Alpha2() {}
 
-func beta() {}
+func Beta() {}
+
+func alpha() {}
 
 func charlie() {}
 `,
 		},
-		"doc comments move with their function": {
+		"comments inside function bodies": {
 			give: `package a
 
-// beta does B.
-// It has a multi-line comment.
-func beta() {}
+func beta() {
+	// inside beta
+}
 
-/*
-alpha does A.
-*/
-func alpha() {}
+func alpha() {
+	/* inside alpha */
+}
 `,
 			want: `package a
 
-/*
-alpha does A.
-*/
-func alpha() {}
+func alpha() {
+	/* inside alpha */
+}
 
-// beta does B.
-// It has a multi-line comment.
-func beta() {}
+func beta() {
+	// inside beta
+}
 `,
 		},
 		"compiler directives move with their function": {
@@ -103,68 +113,6 @@ func alpha() {}
 
 //go:noinline
 func beta() {}
-`,
-		},
-		"trailing same-line comments move with their function": {
-			give: `package a
-
-func beta() {} // about beta
-
-func alpha() {} /* about alpha */
-`,
-			want: `package a
-
-func alpha() {} /* about alpha */
-
-func beta() {} // about beta
-`,
-		},
-		"floating comments stay in place": {
-			give: `package a
-
-// Section: helpers
-
-func beta() {}
-
-// end of helpers
-
-func alpha() {}
-`,
-			want: `package a
-
-// Section: helpers
-
-func alpha() {}
-
-// end of helpers
-
-func beta() {}
-`,
-		},
-		"methods move behind their type, sorted alphabetically": {
-			give: `package a
-
-type T struct{}
-
-func zulu() {}
-
-func (t *T) beta() {}
-
-func (t T) Alpha() {}
-
-func alpha() {}
-`,
-			want: `package a
-
-type T struct{}
-
-func (t T) Alpha() {}
-
-func (t *T) beta() {}
-
-func alpha() {}
-
-func zulu() {}
 `,
 		},
 		"constructor comes first, then the methods": {
@@ -219,34 +167,228 @@ type T int
 func NewT() T { return 0 }
 `,
 		},
-		"multiple types": {
+		"doc comments move with their function": {
 			give: `package a
 
-type B struct{}
+// beta does B.
+// It has a multi-line comment.
+func beta() {}
 
-type A struct{}
-
-func (A) M() {}
-
-func NewB() B { return B{} }
-
-func NewA() A { return A{} }
-
-func (B) M() {}
+/*
+alpha does A.
+*/
+func alpha() {}
 `,
 			want: `package a
 
-type B struct{}
+/*
+alpha does A.
+*/
+func alpha() {}
 
-func NewB() B { return B{} }
+// beta does B.
+// It has a multi-line comment.
+func beta() {}
+`,
+		},
+		"empty lines and comments at the edges of function bodies": {
+			give: `package a
 
-func (B) M() {}
+func beta() {
 
-type A struct{}
+	// leading comment after an empty line
+	println("b")
 
-func NewA() A { return A{} }
+	// trailing comment before the closing brace
 
-func (A) M() {}
+}
+
+func alpha() {
+	// only a comment
+}
+`,
+			want: `package a
+
+func alpha() {
+	// only a comment
+}
+
+func beta() {
+
+	// leading comment after an empty line
+	println("b")
+
+	// trailing comment before the closing brace
+
+}
+`,
+		},
+		"floating comments and trailing comments around types": {
+			give: `package a
+
+type T struct{} // the T type
+
+// --- helpers ---
+
+func (T) M() {} // method M
+`,
+			want: `package a
+
+type T struct{} // the T type
+
+func (T) M() {} // method M
+
+// --- helpers ---
+`,
+		},
+		"floating comments stay in place": {
+			give: `package a
+
+// Section: helpers
+
+func beta() {}
+
+// end of helpers
+
+func alpha() {}
+`,
+			want: `package a
+
+// Section: helpers
+
+func alpha() {}
+
+// end of helpers
+
+func beta() {}
+`,
+		},
+		"function literals and multi-line signatures": {
+			give: `package a
+
+func walk(
+	root string,
+	visit func(path string) error, // called for each path
+) error {
+	handle := func(path string) error {
+		// closures contain their own bodies
+
+		return visit(path)
+	}
+
+	return handle(root)
+}
+
+func apply(values []int, transform func(int) int) []int {
+	result := make([]int, 0, len(values))
+
+	for _, value := range values {
+		result = append(result, transform(value))
+	}
+	// done with all values
+
+	return result
+}
+`,
+			want: `package a
+
+func apply(values []int, transform func(int) int) []int {
+	result := make([]int, 0, len(values))
+
+	for _, value := range values {
+		result = append(result, transform(value))
+	}
+	// done with all values
+
+	return result
+}
+
+func walk(
+	root string,
+	visit func(path string) error, // called for each path
+) error {
+	handle := func(path string) error {
+		// closures contain their own bodies
+
+		return visit(path)
+	}
+
+	return handle(root)
+}
+`,
+		},
+		"functions of different length": {
+			give: `package a
+
+func beta() {
+	x := 1
+	_ = x
+	y := 2
+	_ = y
+}
+
+func alpha() {}
+`,
+			want: `package a
+
+func alpha() {}
+
+func beta() {
+	x := 1
+	_ = x
+	y := 2
+	_ = y
+}
+`,
+		},
+		"functions without body": {
+			give: `package a
+
+func beta() int
+
+func alpha()
+`,
+			want: `package a
+
+func alpha()
+
+func beta() int
+`,
+		},
+		"generic functions": {
+			give: `package a
+
+func Map[T, U any](in []T, f func(T) U) []U { return nil }
+
+func Filter[T any](in []T, f func(T) bool) []T { return nil }
+`,
+			want: `package a
+
+func Filter[T any](in []T, f func(T) bool) []T { return nil }
+
+func Map[T, U any](in []T, f func(T) U) []U { return nil }
+`,
+		},
+		"generic types": {
+			give: `package a
+
+type List[T any] struct{ items []T }
+
+func (l *List[T]) Push(item T) {}
+
+func NewList[T any]() *List[T] { return &List[T]{} }
+
+func (l List[T]) Len() int { return len(l.items) }
+`,
+			want: `package a
+
+type List[T any] struct{ items []T }
+
+func NewList[T any]() *List[T] { return &List[T]{} }
+
+func (l List[T]) Len() int { return len(l.items) }
+
+func (l *List[T]) Push(item T) {}
 `,
 		},
 		"grouped type declaration": {
@@ -277,28 +419,6 @@ func NewB() B { return B{} }
 func (B) M() {}
 `,
 		},
-		"generic types": {
-			give: `package a
-
-type List[T any] struct{ items []T }
-
-func (l *List[T]) Push(item T) {}
-
-func NewList[T any]() *List[T] { return &List[T]{} }
-
-func (l List[T]) Len() int { return len(l.items) }
-`,
-			want: `package a
-
-type List[T any] struct{ items []T }
-
-func NewList[T any]() *List[T] { return &List[T]{} }
-
-func (l List[T]) Len() int { return len(l.items) }
-
-func (l *List[T]) Push(item T) {}
-`,
-		},
 		"methods and constructors of types declared in other files stay in place": {
 			give: `package a
 
@@ -321,28 +441,6 @@ func (o *Other) Alpha() {}
 func beta() {}
 `,
 		},
-		"only an exact New + type name is a constructor": {
-			give: `package a
-
-type T struct{}
-
-func NewTFromString(s string) T { return T{} }
-
-func New() T { return T{} }
-
-func NewT() T { return T{} }
-`,
-			want: `package a
-
-type T struct{}
-
-func NewT() T { return T{} }
-
-func New() T { return T{} }
-
-func NewTFromString(s string) T { return T{} }
-`,
-		},
 		"methods before the first type declaration": {
 			give: `package a
 
@@ -361,43 +459,93 @@ func (T) A() {}
 func (T) B() {}
 `,
 		},
-		"floating comments and trailing comments around types": {
-			give: `package a
-
-type T struct{} // the T type
-
-// --- helpers ---
-
-func (T) M() {} // method M
-`,
-			want: `package a
-
-type T struct{} // the T type
-
-func (T) M() {} // method M
-
-// --- helpers ---
-`,
-		},
-		"single-line spacing between methods is preserved": {
+		"methods move behind their type, sorted alphabetically": {
 			give: `package a
 
 type T struct{}
 
-func (T) A() {}
-func (T) B() {}
+func zulu() {}
+
+func (t *T) beta() {}
+
+func (t T) Alpha() {}
+
+func alpha() {}
 `,
 			want: `package a
 
 type T struct{}
 
-func (T) A() {}
-func (T) B() {}
+func (t T) Alpha() {}
+
+func (t *T) beta() {}
+
+func alpha() {}
+
+func zulu() {}
 `,
 		},
-		"CRLF line endings with moved methods": {
-			give: "package a\r\n\r\nfunc (T) M() {}\r\n\r\ntype T struct{}\r\n",
-			want: "package a\r\n\r\ntype T struct{}\r\n\r\nfunc (T) M() {}\r\n",
+		"multiple init functions keep their relative order": {
+			give: `package a
+
+func zulu() {}
+
+func init() { println(1) }
+
+func alpha() {}
+
+func init() { println(2) }
+`,
+			want: `package a
+
+func alpha() {}
+
+func init() { println(1) }
+
+func init() { println(2) }
+
+func zulu() {}
+`,
+		},
+		"multiple types": {
+			give: `package a
+
+type B struct{}
+
+type A struct{}
+
+func (A) M() {}
+
+func NewB() B { return B{} }
+
+func NewA() A { return A{} }
+
+func (B) M() {}
+`,
+			want: `package a
+
+type B struct{}
+
+func NewB() B { return B{} }
+
+func (B) M() {}
+
+type A struct{}
+
+func NewA() A { return A{} }
+
+func (A) M() {}
+`,
+		},
+		"no functions": {
+			give: `package a
+
+var x = 1
+`,
+			want: `package a
+
+var x = 1
+`,
 		},
 		"non-function declarations stay in place": {
 			give: `package a
@@ -429,122 +577,26 @@ var V = 2
 type T int
 `,
 		},
-		"byte order puts capitalized functions first": {
+		"only an exact New + type name is a constructor": {
 			give: `package a
 
-func charlie() {}
+type T struct{}
 
-func Beta() {}
+func NewTFromString(s string) T { return T{} }
 
-func alpha() {}
+func New() T { return T{} }
 
-func Alpha2() {}
+func NewT() T { return T{} }
 `,
 			want: `package a
 
-func Alpha2() {}
+type T struct{}
 
-func Beta() {}
+func NewT() T { return T{} }
 
-func alpha() {}
+func New() T { return T{} }
 
-func charlie() {}
-`,
-		},
-		"same name different case uses byte order": {
-			give: `package a
-
-func foo() {}
-
-func Foo() {}
-`,
-			want: `package a
-
-func Foo() {}
-
-func foo() {}
-`,
-		},
-		"multiple init functions keep their relative order": {
-			give: `package a
-
-func zulu() {}
-
-func init() { println(1) }
-
-func alpha() {}
-
-func init() { println(2) }
-`,
-			want: `package a
-
-func alpha() {}
-
-func init() { println(1) }
-
-func init() { println(2) }
-
-func zulu() {}
-`,
-		},
-		"generic functions": {
-			give: `package a
-
-func Map[T, U any](in []T, f func(T) U) []U { return nil }
-
-func Filter[T any](in []T, f func(T) bool) []T { return nil }
-`,
-			want: `package a
-
-func Filter[T any](in []T, f func(T) bool) []T { return nil }
-
-func Map[T, U any](in []T, f func(T) U) []U { return nil }
-`,
-		},
-		"functions of different length": {
-			give: `package a
-
-func beta() {
-	x := 1
-	_ = x
-	y := 2
-	_ = y
-}
-
-func alpha() {}
-`,
-			want: `package a
-
-func alpha() {}
-
-func beta() {
-	x := 1
-	_ = x
-	y := 2
-	_ = y
-}
-`,
-		},
-		"comments inside function bodies": {
-			give: `package a
-
-func beta() {
-	// inside beta
-}
-
-func alpha() {
-	/* inside alpha */
-}
-`,
-			want: `package a
-
-func alpha() {
-	/* inside alpha */
-}
-
-func beta() {
-	// inside beta
-}
+func NewTFromString(s string) T { return T{} }
 `,
 		},
 		"realistic functions with code, empty lines, and comments": {
@@ -769,124 +821,62 @@ func validName(name string) bool {
 var errInvalidName = errors.New("invalid name")
 `,
 		},
-		"function literals and multi-line signatures": {
+		"reverse order": {
 			give: `package a
 
-func walk(
-	root string,
-	visit func(path string) error, // called for each path
-) error {
-	handle := func(path string) error {
-		// closures contain their own bodies
-
-		return visit(path)
-	}
-
-	return handle(root)
-}
-
-func apply(values []int, transform func(int) int) []int {
-	result := make([]int, 0, len(values))
-
-	for _, value := range values {
-		result = append(result, transform(value))
-	}
-	// done with all values
-
-	return result
-}
-`,
-			want: `package a
-
-func apply(values []int, transform func(int) int) []int {
-	result := make([]int, 0, len(values))
-
-	for _, value := range values {
-		result = append(result, transform(value))
-	}
-	// done with all values
-
-	return result
-}
-
-func walk(
-	root string,
-	visit func(path string) error, // called for each path
-) error {
-	handle := func(path string) error {
-		// closures contain their own bodies
-
-		return visit(path)
-	}
-
-	return handle(root)
-}
-`,
-		},
-		"empty lines and comments at the edges of function bodies": {
-			give: `package a
-
-func beta() {
-
-	// leading comment after an empty line
-	println("b")
-
-	// trailing comment before the closing brace
-
-}
-
-func alpha() {
-	// only a comment
-}
-`,
-			want: `package a
-
-func alpha() {
-	// only a comment
-}
-
-func beta() {
-
-	// leading comment after an empty line
-	println("b")
-
-	// trailing comment before the closing brace
-
-}
-`,
-		},
-		"functions without body": {
-			give: `package a
-
-func beta() int
-
-func alpha()
-`,
-			want: `package a
-
-func alpha()
-
-func beta() int
-`,
-		},
-		"build constraint and package doc stay in place": {
-			give: `//go:build linux
-
-// Package a does things.
-package a
+func charlie() {}
 
 func beta() {}
 
 func alpha() {}
 `,
-			want: `//go:build linux
-
-// Package a does things.
-package a
+			want: `package a
 
 func alpha() {}
 
 func beta() {}
+
+func charlie() {}
+`,
+		},
+		"same name different case uses byte order": {
+			give: `package a
+
+func foo() {}
+
+func Foo() {}
+`,
+			want: `package a
+
+func Foo() {}
+
+func foo() {}
+`,
+		},
+		"single function": {
+			give: `package a
+
+func only() {}
+`,
+			want: `package a
+
+func only() {}
+`,
+		},
+		"single-line spacing between methods is preserved": {
+			give: `package a
+
+type T struct{}
+
+func (T) A() {}
+func (T) B() {}
+`,
+			want: `package a
+
+type T struct{}
+
+func (T) A() {}
+func (T) B() {}
 `,
 		},
 		"trailing comment of the last declaration": {
@@ -901,18 +891,28 @@ func alpha() {} // a
 
 func beta() {} // b`,
 		},
-		"CRLF line endings": {
-			give: "package a\r\n\r\n// b\r\nfunc b() {}\r\n\r\nfunc a() {}\r\n",
-			want: "package a\r\n\r\nfunc a() {}\r\n\r\n// b\r\nfunc b() {}\r\n",
+		"trailing same-line comments move with their function": {
+			give: `package a
+
+func beta() {} // about beta
+
+func alpha() {} /* about alpha */
+`,
+			want: `package a
+
+func alpha() {} /* about alpha */
+
+func beta() {} // about beta
+`,
 		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			have, err := fix.Sort("test.go", []byte(tt.give), fix.Package{})
+			have, err := fix.Sort("test.go", []byte(tt.give))
 			must.NoError(t, err)
 			must.Eq(t, tt.want, string(have))
-			again, err := fix.Sort("test.go", have, fix.Package{})
+			again, err := fix.Sort("test.go", have)
 			must.NoError(t, err, must.Sprint("second run"))
 			must.Eq(t, string(have), string(again), must.Sprint("second run changed the result"))
 		})
@@ -936,15 +936,15 @@ var x = 1
 
 func a() {}
 `
-	once, err := fix.Sort("test.go", []byte(give), fix.Package{})
+	once, err := fix.Sort("test.go", []byte(give))
 	must.NoError(t, err)
-	twice, err := fix.Sort("test.go", once, fix.Package{})
+	twice, err := fix.Sort("test.go", once)
 	must.NoError(t, err)
 	must.Eq(t, string(once), string(twice), must.Sprint("not idempotent"))
 }
 
 func TestSortFuncsInvalidSource(t *testing.T) {
 	t.Parallel()
-	_, err := fix.Sort("test.go", []byte("package a\n\nfunc {"), fix.Package{})
+	_, err := fix.Sort("test.go", []byte("package a\n\nfunc {"))
 	must.Error(t, err)
 }

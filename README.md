@@ -13,7 +13,9 @@ Sorts all elements of Golang source code alphabetically.
 - Struct fields get sorted alphabetically.
   Structs containing blank (`_`) fields keep their order,
   since they usually serve as padding.
-  - Instantiations in which more than one field value calls a function
+- Map literals with identifier or string keys get sorted alphabetically by key.
+  - Struct instantiations and map literals in
+    which more than one value calls a function
     or uses a channel keep their order, since Go evaluates them in source order.
 - Skips `vendor`, `testdata`, hidden, and `_`-prefixed directories.
 - The relative order of functions with identical names
