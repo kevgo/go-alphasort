@@ -27,10 +27,4 @@ go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
 
 ## Development
 
-```text
-make test   # all checks and tests (lint, unit, end-to-end)
-make lint   # only the static checks (go vet, go mod tidy)
-make unit   # only the unit tests
-make cuke   # only the end-to-end tests (Cucumber scenarios via godog)
-make fix    # formats the code and sorts its functions
-```
+Run `make` to see available dev tasks.
