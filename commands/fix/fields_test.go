@@ -167,7 +167,7 @@ var x = T{Bravo: 2, alpha: 3, zulu: 1}
 var y = &T{
 	// doc of alpha
 	alpha: 3,
-	zulu:  1, // trailing zulu
+	zulu: 1, // trailing zulu
 }
 
 type T struct {
@@ -269,6 +269,26 @@ var m = map[string]int{"b": next(), "a": next()}
 var m = map[string]int{"b": next(), "a": next()}
 `,
 		},
+		"moved fields keep their spacing": {
+			give: `package a
+
+type T struct {
+	zulu    int
+	charlie string
+
+	alpha bool
+}
+`,
+			want: `package a
+
+type T struct {
+	alpha bool
+	charlie string
+
+	zulu    int
+}
+`,
+		},
 		"names in a multi-name field": {
 			give: `package a
 
@@ -308,7 +328,7 @@ func f(cfg struct{ b, a int }) {
 
 type T struct {
 	alpha int
-	zulu  struct {
+	zulu struct {
 		x int
 		y int
 	}
@@ -353,42 +373,6 @@ var y = map[string]*Inner{"one": {c: 2, d: 1}}
 var z = other.Config{Alpha: 2, Zulu: 1}
 
 var w = struct{ a, b int }{a: 2, b: 1}
-`,
-		},
-		"not gofmt-formatted input does not get formatted": {
-			give: `package a
-
-type T struct {
-  b   int
-  a string
-}
-`,
-			want: `package a
-
-type T struct {
-  a string
-  b   int
-}
-`,
-		},
-		"realigns the fields": {
-			give: `package a
-
-type T struct {
-	zulu    int
-	charlie string
-
-	alpha bool
-}
-`,
-			want: `package a
-
-type T struct {
-	alpha   bool
-	charlie string
-
-	zulu int
-}
 `,
 		},
 		"single-line struct": {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
-	"go/format"
 	"go/parser"
 	"go/token"
 	"slices"
@@ -13,7 +12,7 @@ import (
 
 // Sort provides the given Go source code with its elements sorted alphabetically:
 // the fields of struct types, the keyed elements of struct and map literals, and the top-level functions and methods.
-// If the given source code is formatted with gofmt, the result is as well.
+// It only reorders code and leaves formatting, such as the alignment of moved struct fields, to gofmt.
 func Sort(filename string, src []byte) ([]byte, error) {
 	fset := token.NewFileSet()
 	file, err := parse(fset, filename, src)
@@ -29,12 +28,6 @@ func Sort(filename string, src []byte) ([]byte, error) {
 		}
 	}
 	output = []byte(sortFuncs(fset, file, output))
-	if formatted, err := format.Source(src); err == nil && bytes.Equal(formatted, src) {
-		// realign the moved struct fields
-		if output, err = format.Source(output); err != nil {
-			return nil, fmt.Errorf("internal error: sorting produced invalid Go code: %w", err)
-		}
-	}
 	// safety net: never hand out code that no longer parses
 	if _, err := parse(token.NewFileSet(), filename, output); err != nil {
 		return nil, fmt.Errorf("internal error: sorting produced invalid Go code: %w", err)
@@ -239,7 +232,7 @@ func splitPieces(fset *token.FileSet, file *ast.File, src []byte) (string, []pie
 			if declIndex < declCount && spans[declIndex].begin <= begin {
 				continue // inside a declaration
 			}
-			spans = append(spans, span{end: end, piece: piece{kind: kindOther}, begin: begin})
+			spans = append(spans, span{begin: begin, end: end, piece: piece{kind: kindOther}})
 		}
 	}
 	slices.SortFunc(spans, func(a, b span) int { return a.begin - b.begin })
