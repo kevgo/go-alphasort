@@ -13,10 +13,10 @@ Sorts all elements of Golang source code alphabetically.
   - Files named `main.go` are scripts, ordered by call flow,
     so their free-standing functions keep their order.
     Everything else in them gets sorted as usual.
-- Struct fields get sorted alphabetically.
+- Struct fields get sorted case insensitive.
   Structs containing blank (`_`) fields keep their order,
   since they usually serve as padding.
-- Map literals with identifier or string keys get sorted alphabetically by key.
+- Map literals with identifier or string keys get sorted case insensitive by key.
   - Struct instantiations and map literals in
     which more than one value calls a function
     or uses a channel keep their order, since Go evaluates them in source order.
