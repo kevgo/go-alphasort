@@ -36,6 +36,8 @@ go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
 
 Run `make` to see available dev tasks.
 
+## Release
+
 To release a new version, push a tag:
 
 ```sh
@@ -43,7 +45,4 @@ git tag v1.2.3
 git push origin v1.2.3
 ```
 
-This triggers the release workflow,
-which uses [GoReleaser](https://goreleaser.com) to build binaries for Linux,
-macOS, and Windows and publish them to GitHub Releases.
 Run `make release-snapshot` to try the release build locally.
