@@ -46,10 +46,15 @@ func declaredTypes(file *ast.File) typeInfo {
 			if n.Recv == nil {
 				declare(n.Name)
 			}
-			declareFields(n.Recv)
-		case *ast.FuncType:
-			declareFields(n.Params)
-			declareFields(n.Results)
+			if n.Body != nil {
+				// parameter and result names enter a scope only in functions that have a body
+				declareFields(n.Recv)
+				declareFields(n.Type.Params)
+				declareFields(n.Type.Results)
+			}
+		case *ast.FuncLit:
+			declareFields(n.Type.Params)
+			declareFields(n.Type.Results)
 		case *ast.ValueSpec:
 			declare(n.Names...)
 		case *ast.AssignStmt:

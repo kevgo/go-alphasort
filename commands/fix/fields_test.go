@@ -201,6 +201,36 @@ func m() T {
 }
 `,
 		},
+		"instantiations with conversions named like parameters of function types": {
+			give: `package a
+
+type Meters int
+
+type Callback func(Meters int, len int) (string error)
+
+type Handler interface {
+	Handle(Meters int) (len int)
+}
+
+func asm(Meters int)
+
+var x = T{b: Meters(1), c: len(s), a: next()}
+`,
+			want: `package a
+
+type Meters int
+
+type Callback func(Meters int, len int) (string error)
+
+type Handler interface {
+	Handle(Meters int) (len int)
+}
+
+func asm(Meters int)
+
+var x = T{a: next(), b: Meters(1), c: len(s)}
+`,
+		},
 		"keyed instantiations": {
 			give: `package a
 
