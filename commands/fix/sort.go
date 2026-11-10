@@ -188,17 +188,17 @@ func splitPieces(fset *token.FileSet, file *ast.File, src []byte) (string, []pie
 	tokFile := fset.File(file.Pos())
 	headEnd := tokFile.Offset(file.Name.End())
 	type span struct {
-		end, start int
+		begin, end int
 		piece      piece
 	}
 	spans := []span{}
 	for i, decl := range file.Decls {
-		start := decl.Pos()
+		begin := decl.Pos()
 		p := piece{kind: kindOther}
 		switch d := decl.(type) {
 		case *ast.FuncDecl:
 			if d.Doc != nil {
-				start = d.Doc.Pos()
+				begin = d.Doc.Pos()
 			}
 			p.name = d.Name.Name
 			p.kind = kindFunc
@@ -208,7 +208,7 @@ func splitPieces(fset *token.FileSet, file *ast.File, src []byte) (string, []pie
 			}
 		case *ast.GenDecl:
 			if d.Doc != nil {
-				start = d.Doc.Pos()
+				begin = d.Doc.Pos()
 			}
 			if d.Tok == token.TYPE {
 				p.kind = kindType
@@ -222,32 +222,32 @@ func splitPieces(fset *token.FileSet, file *ast.File, src []byte) (string, []pie
 			limit = file.Decls[i+1].Pos()
 		}
 		end := trailingCommentEnd(tokFile, file.Comments, decl.End(), limit)
-		spans = append(spans, span{start: tokFile.Offset(start), end: tokFile.Offset(end), piece: p})
+		spans = append(spans, span{begin: tokFile.Offset(begin), end: tokFile.Offset(end), piece: p})
 	}
 	// floating comments: comments after the package name that aren't part of a declaration
 	declCount := len(spans)
 	declIndex := 0
 	for _, group := range file.Comments {
 		for _, comment := range group.List {
-			start, end := tokFile.Offset(comment.Pos()), tokFile.Offset(comment.End())
-			if start < headEnd {
+			begin, end := tokFile.Offset(comment.Pos()), tokFile.Offset(comment.End())
+			if begin < headEnd {
 				continue
 			}
-			for declIndex < declCount && spans[declIndex].end <= start {
+			for declIndex < declCount && spans[declIndex].end <= begin {
 				declIndex++
 			}
-			if declIndex < declCount && spans[declIndex].start <= start {
+			if declIndex < declCount && spans[declIndex].begin <= begin {
 				continue // inside a declaration
 			}
-			spans = append(spans, span{end: end, piece: piece{kind: kindOther}, start: start})
+			spans = append(spans, span{end: end, piece: piece{kind: kindOther}, begin: begin})
 		}
 	}
-	slices.SortFunc(spans, func(a, b span) int { return a.start - b.start })
+	slices.SortFunc(spans, func(a, b span) int { return a.begin - b.begin })
 	pieces := make([]piece, len(spans))
 	cursor := headEnd
 	for i, s := range spans {
-		s.piece.gapBefore = string(src[cursor:s.start])
-		s.piece.text = string(src[s.start:s.end])
+		s.piece.gapBefore = string(src[cursor:s.begin])
+		s.piece.text = string(src[s.begin:s.end])
 		pieces[i] = s.piece
 		cursor = s.end
 	}
