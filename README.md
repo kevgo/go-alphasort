@@ -51,8 +51,7 @@ Run `make` to see available dev tasks.
 To release a new version, push a tag:
 
 ```sh
-git tag v1.2.3
-git push origin v1.2.3
+git tag v1.2.3 && git push origin v1.2.3
 ```
 
 Run `make release-snapshot` to try the release build locally.
