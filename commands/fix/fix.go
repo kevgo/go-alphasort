@@ -31,8 +31,15 @@ func Run(args []string, stderr io.Writer) int {
 		}
 	}
 	exitCode := 0
+	packages := map[string]Package{}
 	for _, file := range files {
-		if err := fixFile(file); err != nil {
+		dir := filepath.Dir(file)
+		pkg, scanned := packages[dir]
+		if !scanned {
+			pkg = ScanDir(dir)
+			packages[dir] = pkg
+		}
+		if err := fixFile(file, pkg); err != nil {
 			fmt.Fprintln(stderr, err)
 			exitCode = 2
 		}
@@ -40,8 +47,8 @@ func Run(args []string, stderr io.Writer) int {
 	return exitCode
 }
 
-// fixFile sorts the functions in the given file and writes the result back to disk.
-func fixFile(path string) error {
+// fixFile sorts the given file, which belongs to the given package, and writes the result back to disk.
+func fixFile(path string, pkg Package) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -53,7 +60,7 @@ func fixFile(path string) error {
 	if err != nil {
 		return err
 	}
-	sorted, err := Sort(path, src)
+	sorted, err := Sort(path, src, pkg)
 	if err != nil {
 		return err
 	}

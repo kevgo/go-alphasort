@@ -1,36 +1,44 @@
 package fix
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
 	"slices"
 	"strings"
 )
 
-// Sort returns the given Go source code with its functions and methods reordered:
-func Sort(filename string, src []byte) ([]byte, error) {
+// Sort provides the given Go source code with its elements sorted alphabetically:
+// the fields of struct types and struct instantiations, and the top-level functions and methods.
+// The given package contains the other files of the package that the given file belongs to.
+// If the given source code is formatted with gofmt, the result is as well.
+func Sort(filename string, src []byte, pkg Package) ([]byte, error) {
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, filename, src, parser.ParseComments|parser.SkipObjectResolution)
+	file, err := parse(fset, filename, src)
 	if err != nil {
 		return nil, err
 	}
-	head, pieces, tail := splitPieces(fset, file, src)
-	pieces = attachToTypes(pieces, newline(src))
-	sortFreeFuncs(pieces)
-	var result strings.Builder
-	result.Grow(len(src))
-	result.WriteString(head)
-	for _, piece := range pieces {
-		result.WriteString(piece.gapBefore)
-		result.WriteString(piece.text)
+	output := []byte(sortFields(fset, file, src, pkg.with(filename, file).analyze()))
+	if !bytes.Equal(output, src) {
+		fset = token.NewFileSet()
+		file, err = parse(fset, filename, output)
+		if err != nil {
+			return nil, fmt.Errorf("internal error: sorting struct fields produced invalid Go code: %w", err)
+		}
 	}
-	result.WriteString(tail)
-	output := []byte(result.String())
+	output = []byte(sortFuncs(fset, file, output))
+	if formatted, err := format.Source(src); err == nil && bytes.Equal(formatted, src) {
+		// realign the moved struct fields
+		if output, err = format.Source(output); err != nil {
+			return nil, fmt.Errorf("internal error: sorting produced invalid Go code: %w", err)
+		}
+	}
 	// safety net: never hand out code that no longer parses
-	if _, err := parser.ParseFile(token.NewFileSet(), filename, output, parser.ParseComments|parser.SkipObjectResolution); err != nil {
-		return nil, fmt.Errorf("internal error: sorting functions produced invalid Go code: %w", err)
+	if _, err := parse(token.NewFileSet(), filename, output); err != nil {
+		return nil, fmt.Errorf("internal error: sorting produced invalid Go code: %w", err)
 	}
 	return output, nil
 }
@@ -107,6 +115,11 @@ func newline(src []byte) string {
 	return "\n"
 }
 
+// parse parses the given Go source code.
+func parse(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
+	return parser.ParseFile(fset, filename, src, parser.ParseComments|parser.SkipObjectResolution)
+}
+
 // receiverTypeName provides the name of the type that the given method receiver refers to.
 func receiverTypeName(recv *ast.FieldList) string {
 	if recv == nil || len(recv.List) == 0 {
@@ -152,6 +165,23 @@ func sortFreeFuncs(pieces []piece) {
 	}
 }
 
+// sortFuncs provides the given source code with its functions and methods reordered:
+// constructors and methods move behind their type, and the remaining free-standing functions get sorted alphabetically.
+func sortFuncs(fset *token.FileSet, file *ast.File, src []byte) string {
+	head, pieces, tail := splitPieces(fset, file, src)
+	pieces = attachToTypes(pieces, newline(src))
+	sortFreeFuncs(pieces)
+	var result strings.Builder
+	result.Grow(len(src))
+	result.WriteString(head)
+	for _, piece := range pieces {
+		result.WriteString(piece.gapBefore)
+		result.WriteString(piece.text)
+	}
+	result.WriteString(tail)
+	return result.String()
+}
+
 // splitPieces splits the given source code into the part up to the package name,
 // the top-level declarations and floating comments after it,
 // and the remaining text after the last piece.
@@ -159,7 +189,7 @@ func splitPieces(fset *token.FileSet, file *ast.File, src []byte) (string, []pie
 	tokFile := fset.File(file.Pos())
 	headEnd := tokFile.Offset(file.Name.End())
 	type span struct {
-		start, end int
+		end, start int
 		piece      piece
 	}
 	spans := []span{}
@@ -210,7 +240,7 @@ func splitPieces(fset *token.FileSet, file *ast.File, src []byte) (string, []pie
 			if declIndex < declCount && spans[declIndex].start <= start {
 				continue // inside a declaration
 			}
-			spans = append(spans, span{start: start, end: end, piece: piece{kind: kindOther}})
+			spans = append(spans, span{end: end, piece: piece{kind: kindOther}, start: start})
 		}
 	}
 	slices.SortFunc(spans, func(a, b span) int { return a.start - b.start })

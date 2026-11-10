@@ -909,10 +909,10 @@ func beta() {} // b`,
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			have, err := fix.Sort("test.go", []byte(tt.give))
+			have, err := fix.Sort("test.go", []byte(tt.give), fix.Package{})
 			must.NoError(t, err)
 			must.Eq(t, tt.want, string(have))
-			again, err := fix.Sort("test.go", have)
+			again, err := fix.Sort("test.go", have, fix.Package{})
 			must.NoError(t, err, must.Sprint("second run"))
 			must.Eq(t, string(have), string(again), must.Sprint("second run changed the result"))
 		})
@@ -936,15 +936,15 @@ var x = 1
 
 func a() {}
 `
-	once, err := fix.Sort("test.go", []byte(give))
+	once, err := fix.Sort("test.go", []byte(give), fix.Package{})
 	must.NoError(t, err)
-	twice, err := fix.Sort("test.go", once)
+	twice, err := fix.Sort("test.go", once, fix.Package{})
 	must.NoError(t, err)
 	must.Eq(t, string(once), string(twice), must.Sprint("not idempotent"))
 }
 
 func TestSortFuncsInvalidSource(t *testing.T) {
 	t.Parallel()
-	_, err := fix.Sort("test.go", []byte("package a\n\nfunc {"))
+	_, err := fix.Sort("test.go", []byte("package a\n\nfunc {"), fix.Package{})
 	must.Error(t, err)
 }
