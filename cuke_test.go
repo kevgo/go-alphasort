@@ -7,18 +7,16 @@ import (
 
 	"github.com/cucumber/godog"
 	"github.com/kevgo/go-alphasort/test"
+	"github.com/shoenig/test/must"
 )
 
 func TestFeatures(t *testing.T) {
 	// "make cuke" runs "make install" first, which installs the binary to test into ~/go/bin.
 	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("cannot determine the home directory: %v", err)
-	}
+	must.NoError(t, err, must.Sprint("cannot determine the home directory"))
 	binPath := filepath.Join(home, "go", "bin", "alphasort")
-	if _, err := os.Stat(binPath); err != nil {
-		t.Fatalf("cannot find the alphasort binary at %s, please run \"make install\": %v", binPath, err)
-	}
+	_, err = os.Stat(binPath)
+	must.NoError(t, err, must.Sprintf("cannot find the alphasort binary at %s, please run \"make install\"", binPath))
 	suite := godog.TestSuite{
 		Name:                "alphasort",
 		ScenarioInitializer: test.InitializeScenario(binPath),
@@ -29,7 +27,5 @@ func TestFeatures(t *testing.T) {
 			TestingT: t,
 		},
 	}
-	if suite.Run() != 0 {
-		t.Fatal("end-to-end tests failed")
-	}
+	must.Zero(t, suite.Run(), must.Sprint("end-to-end tests failed"))
 }
