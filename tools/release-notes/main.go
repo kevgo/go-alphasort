@@ -14,32 +14,6 @@ import (
 
 const changelogPath = "CHANGELOG.md"
 
-// extract returns the body of the changelog section for the given tag.
-func extract(changelog, tag string) (string, error) {
-	heading := "## " + strings.TrimPrefix(tag, "v")
-	var section []string
-	found := false
-	for line := range strings.Lines(changelog) {
-		line = strings.TrimRight(line, " \t\r\n")
-		if !found {
-			found = line == heading
-			continue
-		}
-		if strings.HasPrefix(line, "## ") {
-			break
-		}
-		section = append(section, line)
-	}
-	if !found {
-		return "", fmt.Errorf("%s has no section %q", changelogPath, heading)
-	}
-	body := strings.TrimSpace(strings.Join(section, "\n"))
-	if body == "" {
-		return "", fmt.Errorf("section %q in %s is empty", heading, changelogPath)
-	}
-	return body + "\n", nil
-}
-
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
@@ -65,4 +39,30 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// extract returns the body of the changelog section for the given tag.
+func extract(changelog, tag string) (string, error) {
+	heading := "## " + strings.TrimPrefix(tag, "v")
+	var section []string
+	found := false
+	for line := range strings.Lines(changelog) {
+		line = strings.TrimRight(line, " \t\r\n")
+		if !found {
+			found = line == heading
+			continue
+		}
+		if strings.HasPrefix(line, "## ") {
+			break
+		}
+		section = append(section, line)
+	}
+	if !found {
+		return "", fmt.Errorf("%s has no section %q", changelogPath, heading)
+	}
+	body := strings.TrimSpace(strings.Join(section, "\n"))
+	if body == "" {
+		return "", fmt.Errorf("section %q in %s is empty", heading, changelogPath)
+	}
+	return body + "\n", nil
 }
