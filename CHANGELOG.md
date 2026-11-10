@@ -1,6 +1,6 @@
 # go-alphasort changelog
 
-## v0.0.1
+## 0.0.1
 
 - sorts freestanding functions
 - sorts struct fields
