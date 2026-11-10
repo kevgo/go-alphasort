@@ -7,6 +7,7 @@ DEADCODE     = $(RTA) deadcode
 GHOKIN       = $(RTA) ghokin
 GOFUMPT      = $(RTA) gofumpt
 GOLANGCILINT = $(RTA) golangci-lint
+GORELEASER   = $(RTA) goreleaser
 RUMDL        = $(RTA) rumdl
 STATICCHECK  = $(RTA) --from-source staticcheck
 TAPLO        = $(RTA) taplo
@@ -34,6 +35,10 @@ lint: ${RTA}  # runs the static checks
 	$(ACTIONLINT)
 	$(STATICCHECK) ./...
 	$(GOLANGCILINT) cache clean && $(GOLANGCILINT) run
+	$(GORELEASER) check
+
+release-snapshot: ${RTA}  # builds the release artifacts locally into dist/ without publishing
+	$(GORELEASER) release --snapshot --clean
 
 test: lint unit cuke  # runs all checks and tests
 
@@ -53,6 +58,6 @@ ${RTA}:
 	(cd tools && curl https://raw.githubusercontent.com/kevgo/run-that-app/main/download.sh | sh -s -- --version ${RTA_VERSION} --name rta@${RTA_VERSION})
 	ln -s rta@${RTA_VERSION} tools/rta
 
-.PHONY: cuke fix help install lint test unit update
+.PHONY: cuke fix help install lint release-snapshot test unit update
 # .SILENT:
 .DEFAULT_GOAL := help

@@ -34,6 +34,10 @@ alphasort fix <files>  # format the given files
 
 ## Installation
 
+Download a prebuilt binary from the
+[releases page](https://github.com/kevgo/go-alphasort/releases) or install from
+source:
+
 ```sh
 go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
 ```
@@ -41,3 +45,13 @@ go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
 ## Development
 
 Run `make` to see available dev tasks.
+
+## Release
+
+To release a new version, push a tag:
+
+```sh
+git tag v1.2.3 && git push origin v1.2.3
+```
+
+Run `make release-snapshot` to try the release build locally.
