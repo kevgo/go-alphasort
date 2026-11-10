@@ -40,8 +40,10 @@ test: lint unit cuke  # runs all checks and tests
 unit:  # runs the unit tests
 	go test -count=1 -skip '^TestFeatures$$' ./...
 
-update:
+update: ${RTA}  # updates all dependencies
+	go get -u ./...
 	go mod tidy
+	$(RTA) --update
 
 
 # --- HELPER TARGETS --------------------------------------------------------------------------------------------------------------------------------
