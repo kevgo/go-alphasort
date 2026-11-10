@@ -23,14 +23,14 @@ func TestFeatures(t *testing.T) {
 	_, err = os.Stat(binPath)
 	must.NoError(t, err, must.Sprintf("cannot find the alphasort binary at %s, please run \"make install\"", binPath))
 	suite := godog.TestSuite{
-		Name:                "alphasort",
-		ScenarioInitializer: test.InitializeScenario(binPath),
+		Name: "alphasort",
 		Options: &godog.Options{
 			Format:   "progress",
 			Paths:    []string{"features"},
 			Strict:   true,
 			TestingT: t,
 		},
+		ScenarioInitializer: test.InitializeScenario(binPath),
 	}
 	must.Zero(t, suite.Run(), must.Sprint("end-to-end tests failed"))
 }

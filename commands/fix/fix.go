@@ -40,7 +40,7 @@ func Run(args []string, stderr io.Writer) int {
 	return exitCode
 }
 
-// fixFile sorts the functions in the given file and writes the result back to disk.
+// fixFile sorts the given file and writes the result back to disk.
 func fixFile(path string) error {
 	info, err := os.Stat(path)
 	if err != nil {
