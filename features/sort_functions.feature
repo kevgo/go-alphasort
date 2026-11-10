@@ -1,7 +1,7 @@
 Feature: sort free-standing functions alphabetically
 
   Scenario: functions in reverse order
-    Given a file "main.go" with content:
+    Given a file "app.go" with content:
       """
       package main
 
@@ -13,10 +13,10 @@ Feature: sort free-standing functions alphabetically
 
       func alpha() {}
       """
-    When I run "alphasort fix main.go"
+    When I run "alphasort fix app.go"
     Then the exit code is 0
     And the output is empty
-    And the file "main.go" now has content:
+    And the file "app.go" now has content:
       """
       package main
 
@@ -221,3 +221,67 @@ Feature: sort free-standing functions alphabetically
     When I run "alphasort fix sorted.go"
     Then the exit code is 0
     And the file "sorted.go" is unchanged
+
+  Scenario: functions in main.go keep their order
+    Given a file "main.go" with content:
+      """
+      package main
+
+      func main() {
+      	config := loadConfig()
+      	run(config)
+      }
+
+      func run(config Config) {}
+
+      func loadConfig() Config { return NewConfig() }
+
+      func (c Config) Valid() bool { return c.Name != "" }
+
+      type Config struct {
+      	Name string
+      	Debug bool
+      }
+
+      func NewConfig() Config { return Config{} }
+      """
+    When I run "alphasort fix main.go"
+    Then the exit code is 0
+    And the output is empty
+    And the file "main.go" now has content:
+      """
+      package main
+
+      func main() {
+      	config := loadConfig()
+      	run(config)
+      }
+
+      func run(config Config) {}
+
+      func loadConfig() Config { return NewConfig() }
+
+      type Config struct {
+      	Debug bool
+      	Name string
+      }
+
+      func NewConfig() Config { return Config{} }
+
+      func (c Config) Valid() bool { return c.Name != "" }
+      """
+
+  Scenario: main.go in a subdirectory keeps its function order
+    Given a file "cmd/tool/main.go" with content:
+      """
+      package main
+
+      func main() { setup() }
+
+      func setup() {}
+
+      func cleanup() {}
+      """
+    When I run "alphasort fix"
+    Then the exit code is 0
+    And the file "cmd/tool/main.go" is unchanged
