@@ -51,7 +51,7 @@ Feature: sort struct fields alphabetically
       }
       """
 
-  Scenario: capitalized fields come first
+  Scenario: fields are sorted case-insensitively
     Given a file "names.go" with content:
       """
       package names
@@ -72,8 +72,8 @@ Feature: sort struct fields alphabetically
 
       type T struct {
       	Alpha bool
-      	Bravo string
       	alpha bool
+      	Bravo string
       	zulu  int
       }
       """
@@ -335,8 +335,8 @@ Feature: sort struct fields alphabetically
       var n = Names{a: "a", z: "z"}
 
       var s = map[string]int{
-      	"Bravo": 2,
       	"alpha": 3,
+      	"Bravo": 2,
       	"zulu":  1, // trailing zulu
       }
 

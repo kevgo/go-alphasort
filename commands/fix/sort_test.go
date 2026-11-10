@@ -13,14 +13,6 @@ func TestSortFuncs(t *testing.T) {
 		give string
 		want string
 	}{
-		"CRLF line endings": {
-			give: "package a\r\n\r\n// b\r\nfunc b() {}\r\n\r\nfunc a() {}\r\n",
-			want: "package a\r\n\r\nfunc a() {}\r\n\r\n// b\r\nfunc b() {}\r\n",
-		},
-		"CRLF line endings with moved methods": {
-			give: "package a\r\n\r\nfunc (T) M() {}\r\n\r\ntype T struct{}\r\n",
-			want: "package a\r\n\r\ntype T struct{}\r\n\r\nfunc (T) M() {}\r\n",
-		},
 		"already sorted": {
 			give: `package a
 
@@ -166,6 +158,14 @@ type T int
 
 func NewT() T { return 0 }
 `,
+		},
+		"CRLF line endings": {
+			give: "package a\r\n\r\n// b\r\nfunc b() {}\r\n\r\nfunc a() {}\r\n",
+			want: "package a\r\n\r\nfunc a() {}\r\n\r\n// b\r\nfunc b() {}\r\n",
+		},
+		"CRLF line endings with moved methods": {
+			give: "package a\r\n\r\nfunc (T) M() {}\r\n\r\ntype T struct{}\r\n",
+			want: "package a\r\n\r\ntype T struct{}\r\n\r\nfunc (T) M() {}\r\n",
 		},
 		"doc comments move with their function": {
 			give: `package a

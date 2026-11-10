@@ -13,10 +13,6 @@ func TestSortFields(t *testing.T) {
 		give string
 		want string
 	}{
-		"CRLF line endings": {
-			give: "package a\r\n\r\ntype T struct {\r\n\t// b\r\n\tb int\r\n\ta int\r\n}\r\n",
-			want: "package a\r\n\r\ntype T struct {\r\n\ta int\r\n\t// b\r\n\tb int\r\n}\r\n",
-		},
 		"array literals keep their order": {
 			give: `package a
 
@@ -70,6 +66,10 @@ type T struct {
 	zulu int // trailing zulu
 }
 `,
+		},
+		"CRLF line endings": {
+			give: "package a\r\n\r\ntype T struct {\r\n\t// b\r\n\tb int\r\n\ta int\r\n}\r\n",
+			want: "package a\r\n\r\ntype T struct {\r\n\ta int\r\n\t// b\r\n\tb int\r\n}\r\n",
 		},
 		"embedded fields sort by their type name": {
 			give: `package a
@@ -250,7 +250,7 @@ type T struct {
 `,
 			want: `package a
 
-var x = T{Bravo: 2, alpha: 3, zulu: 1}
+var x = T{alpha: 3, Bravo: 2, zulu: 1}
 
 var y = &T{
 	// doc of alpha
@@ -259,8 +259,8 @@ var y = &T{
 }
 
 type T struct {
-	Bravo int
 	alpha int
+	Bravo int
 	zulu  int
 }
 `,
@@ -319,8 +319,8 @@ var l = Tables{
 }
 
 var s = map[string]int{
-	"Bravo": 2,
 	"alpha": 3,
+	"Bravo": 2,
 	"zulu":  1, // trailing zulu
 }
 
@@ -487,8 +487,8 @@ type T struct {
 
 type T struct {
 	Alpha bool
-	Bravo string
 	alpha bool
+	Bravo string
 	zulu  int
 }
 `,
