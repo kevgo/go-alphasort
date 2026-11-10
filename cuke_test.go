@@ -3,6 +3,7 @@ package alphasort_test
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/cucumber/godog"
@@ -14,7 +15,11 @@ func TestFeatures(t *testing.T) {
 	// "make cuke" runs "make install" first, which installs the binary to test into ~/go/bin.
 	home, err := os.UserHomeDir()
 	must.NoError(t, err, must.Sprint("cannot determine the home directory"))
-	binPath := filepath.Join(home, "go", "bin", "alphasort")
+	binName := "alphasort"
+	if runtime.GOOS == "windows" {
+		binName += ".exe"
+	}
+	binPath := filepath.Join(home, "go", "bin", binName)
 	_, err = os.Stat(binPath)
 	must.NoError(t, err, must.Sprintf("cannot find the alphasort binary at %s, please run \"make install\"", binPath))
 	suite := godog.TestSuite{
