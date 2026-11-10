@@ -1,7 +1,7 @@
 package alphasort_test
 
 import (
-	"os/exec"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -10,10 +10,14 @@ import (
 )
 
 func TestFeatures(t *testing.T) {
-	binPath := filepath.Join(t.TempDir(), "alphasort")
-	build := exec.Command("go", "build", "-o", binPath, "./cmd/alphasort")
-	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("cannot compile alphasort: %v\n%s", err, output)
+	// "make cuke" runs "make install" first, which installs the binary to test into ~/go/bin.
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("cannot determine the home directory: %v", err)
+	}
+	binPath := filepath.Join(home, "go", "bin", "alphasort")
+	if _, err := os.Stat(binPath); err != nil {
+		t.Fatalf("cannot find the alphasort binary at %s, please run \"make install\": %v", binPath, err)
 	}
 	suite := godog.TestSuite{
 		Name:                "alphasort",
