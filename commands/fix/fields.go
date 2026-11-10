@@ -281,10 +281,14 @@ func literalKey(key ast.Expr) (string, bool) {
 }
 
 // isConversion indicates whether a call of the given expression is a type conversion or a call of a side-effect free builtin function.
+// Identifiers count only if the file doesn't declare them as anything that could be called.
 func (info typeInfo) isConversion(fun ast.Expr) bool {
 	switch f := fun.(type) {
 	case *ast.Ident:
-		return pureBuiltins[f.Name] || len(info.types[f.Name]) > 0
+		if info.isType(f) {
+			return true
+		}
+		return pureBuiltins[f.Name] && !info.nonTypes[f.Name]
 	case *ast.ParenExpr:
 		return info.isConversion(f.X)
 	case *ast.IndexExpr:

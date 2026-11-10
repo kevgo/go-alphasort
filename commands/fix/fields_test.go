@@ -143,6 +143,64 @@ var z = T{a: len(s), b: next(), c: int64(1), d: MyInt(2), e: []byte("x"), f: fun
 type MyInt int
 `,
 		},
+		"instantiations with shadowed or out-of-scope conversions keep their order": {
+			give: `package a
+
+type Local int
+
+type Meters int
+
+func f(len func() int) T {
+	return T{b: len(), a: next()}
+}
+
+func g() T {
+	Local := func() int { return next() }
+	return T{b: Local(), a: next()}
+}
+
+func h() {
+	type Remote int
+}
+
+func k() T {
+	return T{b: Remote(), a: next()}
+}
+
+func m() T {
+	type Celsius float64
+	return T{b: Celsius(1), a: next(), c: Meters(2)}
+}
+`,
+			want: `package a
+
+type Local int
+
+type Meters int
+
+func f(len func() int) T {
+	return T{b: len(), a: next()}
+}
+
+func g() T {
+	Local := func() int { return next() }
+	return T{b: Local(), a: next()}
+}
+
+func h() {
+	type Remote int
+}
+
+func k() T {
+	return T{b: Remote(), a: next()}
+}
+
+func m() T {
+	type Celsius float64
+	return T{a: next(), b: Celsius(1), c: Meters(2)}
+}
+`,
+		},
 		"keyed instantiations": {
 			give: `package a
 
