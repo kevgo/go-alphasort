@@ -19,12 +19,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: extract release notes from CHANGELOG.md
-        run: |
-          awk -v heading="## ${GITHUB_REF_NAME#v}" '$0 == heading {found=1; next} found && /^## / {exit} found' CHANGELOG.md > "${RUNNER_TEMP}/release-notes.md"
-          if ! grep -q '[^[:space:]]' "${RUNNER_TEMP}/release-notes.md"; then
-            echo "::error::CHANGELOG.md has no section '## ${GITHUB_REF_NAME#v}'"
-            exit 1
-          fi
+        run: go run ./tools/release-notes "${GITHUB_REF_NAME}" > "${RUNNER_TEMP}/release-notes.md"
       - uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
