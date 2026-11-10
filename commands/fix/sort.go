@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"slices"
 	"strings"
 )
@@ -27,7 +28,7 @@ func Sort(filename string, src []byte) ([]byte, error) {
 			return nil, fmt.Errorf("internal error: sorting struct fields produced invalid Go code: %w", err)
 		}
 	}
-	output = []byte(sortFuncs(fset, file, output))
+	output = []byte(sortFuncs(fset, file, output, !isScript(filename)))
 	// safety net: never hand out code that no longer parses
 	if _, err := parse(token.NewFileSet(), filename, output); err != nil {
 		return nil, fmt.Errorf("internal error: sorting produced invalid Go code: %w", err)
@@ -99,6 +100,12 @@ func comparePieces(a, b piece) int {
 	return strings.Compare(a.name, b.name)
 }
 
+// isScript indicates whether the file with the given path is a script
+// whose free-standing functions are ordered by call flow rather than alphabetically.
+func isScript(path string) bool {
+	return filepath.Base(path) == "main.go"
+}
+
 // newline provides the line ending used in the given source code.
 func newline(src []byte) string {
 	if strings.Contains(string(src), "\r\n") {
@@ -158,11 +165,14 @@ func sortFreeFuncs(pieces []piece) {
 }
 
 // sortFuncs provides the given source code with its functions and methods reordered:
-// constructors and methods move behind their type, and the remaining free-standing functions get sorted alphabetically.
-func sortFuncs(fset *token.FileSet, file *ast.File, src []byte) string {
+// constructors and methods move behind their type, and, if sortFree is true,
+// the remaining free-standing functions get sorted alphabetically.
+func sortFuncs(fset *token.FileSet, file *ast.File, src []byte, sortFunctions bool) string {
 	head, pieces, tail := splitPieces(fset, file, src)
 	pieces = attachToTypes(pieces, newline(src))
-	sortFreeFuncs(pieces)
+	if sortFunctions {
+		sortFreeFuncs(pieces)
+	}
 	var result strings.Builder
 	result.Grow(len(src))
 	result.WriteString(head)

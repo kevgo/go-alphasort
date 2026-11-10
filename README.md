@@ -10,6 +10,9 @@ Sorts all elements of Golang source code alphabetically.
 - All other free-standing functions
   (functions without a receiver)
   get sorted alphabetically within the positions they occupy.
+  - Files named `main.go` are scripts, ordered by call flow,
+    so their free-standing functions keep their order.
+    Everything else in them gets sorted as usual.
 - Struct fields get sorted alphabetically.
   Structs containing blank (`_`) fields keep their order,
   since they usually serve as padding.

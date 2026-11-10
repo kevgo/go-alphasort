@@ -948,3 +948,55 @@ func TestSortFuncsInvalidSource(t *testing.T) {
 	_, err := fix.Sort("test.go", []byte("package a\n\nfunc {"))
 	must.Error(t, err)
 }
+
+func TestSortFuncsScript(t *testing.T) {
+	t.Parallel()
+	give := `package main
+
+func main() {}
+
+func run() {}
+
+func (T) b() {}
+
+func (T) a() {}
+
+type T struct{}
+
+func NewT() T { return T{} }
+
+func helper() {}
+`
+	want := `package main
+
+func main() {}
+
+func run() {}
+
+type T struct{}
+
+func NewT() T { return T{} }
+
+func (T) a() {}
+
+func (T) b() {}
+
+func helper() {}
+`
+	for _, filename := range []string{"main.go", "cmd/tool/main.go"} {
+		t.Run(filename, func(t *testing.T) {
+			t.Parallel()
+			have, err := fix.Sort(filename, []byte(give))
+			must.NoError(t, err)
+			must.Eq(t, want, string(have))
+		})
+	}
+	t.Run("other file names get sorted", func(t *testing.T) {
+		t.Parallel()
+		for _, filename := range []string{"app.go", "main_test.go", "domain.go"} {
+			have, err := fix.Sort(filename, []byte("package main\n\nfunc main() {}\n\nfunc a() {}\n"))
+			must.NoError(t, err)
+			must.Eq(t, "package main\n\nfunc a() {}\n\nfunc main() {}\n", string(have))
+		}
+	})
+}
