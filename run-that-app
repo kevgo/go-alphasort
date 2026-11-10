@@ -6,6 +6,7 @@ deadcode 0.52.0
 ghokin 3.10.0
 gofumpt 0.12.0
 golangci-lint 2.15.0
+goreleaser 2.20.0
 govulncheck 1.1.4
 rumdl 0.3.2
 staticcheck 2026.2.2
