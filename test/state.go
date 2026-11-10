@@ -10,12 +10,12 @@ import (
 
 // scenarioState contains the state of a single Cucumber scenario.
 type scenarioState struct {
-	binPath   string            // the location of the installed alphasort executable
-	dir       string            // the temporary directory in which the scenario runs
-	originals map[string]string // the content of the files created by the scenario
-	stdout    string
-	stderr    string
+	binPath   string // the location of the installed alphasort executable
+	dir       string // the temporary directory in which the scenario runs
 	exitCode  int
+	originals map[string]string // the content of the files created by the scenario
+	stderr    string
+	stdout    string
 }
 
 // run executes the given alphasort command in the scenario directory.
