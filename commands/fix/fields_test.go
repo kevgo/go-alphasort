@@ -121,6 +121,36 @@ type T struct {
 }
 `,
 		},
+		"instantiations with conversions named like parameters of function types": {
+			give: `package a
+
+type Meters int
+
+type Callback func(Meters int, len int) (string error)
+
+type Handler interface {
+	Handle(Meters int) (len int)
+}
+
+func asm(Meters int)
+
+var x = T{b: Meters(1), c: len(s), a: next()}
+`,
+			want: `package a
+
+type Meters int
+
+type Callback func(Meters int, len int) (string error)
+
+type Handler interface {
+	Handle(Meters int) (len int)
+}
+
+func asm(Meters int)
+
+var x = T{a: next(), b: Meters(1), c: len(s)}
+`,
+		},
 		"instantiations with several side effects keep their order": {
 			give: `package a
 
@@ -199,36 +229,6 @@ func m() T {
 	type Celsius float64
 	return T{a: next(), b: Celsius(1), c: Meters(2)}
 }
-`,
-		},
-		"instantiations with conversions named like parameters of function types": {
-			give: `package a
-
-type Meters int
-
-type Callback func(Meters int, len int) (string error)
-
-type Handler interface {
-	Handle(Meters int) (len int)
-}
-
-func asm(Meters int)
-
-var x = T{b: Meters(1), c: len(s), a: next()}
-`,
-			want: `package a
-
-type Meters int
-
-type Callback func(Meters int, len int) (string error)
-
-type Handler interface {
-	Handle(Meters int) (len int)
-}
-
-func asm(Meters int)
-
-var x = T{a: next(), b: Meters(1), c: len(s)}
 `,
 		},
 		"keyed instantiations": {
