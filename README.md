@@ -5,8 +5,8 @@
 
 Sorts all elements of Golang source code alphabetically.
 
-- Constructor functions (`New` + type name) and the methods of
-  that type move directly behind the type declaration
+- Constructors and the methods of a type move directly behind the type
+  declaration.
 - All other free-standing functions
   (functions without a receiver)
   get sorted alphabetically within the positions they occupy.

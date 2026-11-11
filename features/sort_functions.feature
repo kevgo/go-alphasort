@@ -66,6 +66,9 @@ Feature: sort free-standing functions alphabetically
 
       func round(f float64) float64 { return math.Round(f) }
 
+      // NewCircleFromDiameter creates a circle with the given diameter.
+      func NewCircleFromDiameter(d float64) (*Circle, error) { return &Circle{d / 2}, nil }
+
       // Scale enlarges the circle.
       func (c *Circle) Scale(f float64) { c.R *= f }
 
@@ -101,6 +104,9 @@ Feature: sort free-standing functions alphabetically
       // NewCircle creates a circle.
       func NewCircle(r float64) Circle { return Circle{r} }
 
+      // NewCircleFromDiameter creates a circle with the given diameter.
+      func NewCircleFromDiameter(d float64) (*Circle, error) { return &Circle{d / 2}, nil }
+
       func (c Circle) Area() float64 { return math.Pi * c.R * c.R }
 
       // Scale enlarges the circle.
@@ -115,6 +121,38 @@ Feature: sort free-standing functions alphabetically
       func (s Square) Area() float64 { return s.S * s.S }
 
       func round(f float64) float64 { return math.Round(f) }
+      """
+
+  Scenario: functions that don't return an instance of their type first aren't constructors
+    Given a file "shapes.go" with content:
+      """
+      package shapes
+
+      type Circle struct{ R float64 }
+
+      func NewCircleName() string { return "circle" }
+
+      func NewCircles() []Circle { return nil }
+
+      func MakeCircle() Circle { return Circle{} }
+
+      func New() Circle { return Circle{} }
+      """
+    When I run "alphasort fix shapes.go"
+    Then the exit code is 0
+    And the file "shapes.go" now has content:
+      """
+      package shapes
+
+      type Circle struct{ R float64 }
+
+      func MakeCircle() Circle { return Circle{} }
+
+      func New() Circle { return Circle{} }
+
+      func NewCircleName() string { return "circle" }
+
+      func NewCircles() []Circle { return nil }
       """
 
   Scenario: methods of types declared in another file stay in place

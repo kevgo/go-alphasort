@@ -37,7 +37,7 @@ func Sort(filename string, src []byte) ([]byte, error) {
 }
 
 // attachToTypes moves the constructors and methods of the types declared in the given pieces
-// directly behind the respective type declaration.
+// directly behind the respective type declaration: first the constructors, then the methods, each sorted by name.
 func attachToTypes(pieces []piece, nl string) []piece {
 	localTypes := map[string]bool{}
 	for _, p := range pieces {
@@ -45,7 +45,7 @@ func attachToTypes(pieces []piece, nl string) []piece {
 			localTypes[name] = true
 		}
 	}
-	constructors := map[string]piece{}
+	constructors := map[string][]piece{}
 	methods := map[string][]piece{}
 	moved := make([]bool, len(pieces))
 	for i, p := range pieces {
@@ -56,10 +56,9 @@ func attachToTypes(pieces []piece, nl string) []piece {
 				moved[i] = true
 			}
 		case kindFunc:
-			typeName, isNew := strings.CutPrefix(p.name, "New")
-			if _, exists := constructors[typeName]; isNew && localTypes[typeName] && !exists {
+			if isConstructor(p) && localTypes[p.returnType] {
 				p.attached = true
-				constructors[typeName] = p
+				constructors[p.returnType] = append(constructors[p.returnType], p)
 				moved[i] = true
 			}
 		case kindOther, kindType:
@@ -82,7 +81,9 @@ func attachToTypes(pieces []piece, nl string) []piece {
 		}
 		result = append(result, p)
 		for _, typeName := range p.typeNames {
-			if constructor, has := constructors[typeName]; has {
+			typeConstructors := constructors[typeName]
+			slices.SortStableFunc(typeConstructors, comparePieces)
+			for _, constructor := range typeConstructors {
 				result = append(result, withLineGap(constructor, nl))
 			}
 			typeMethods := methods[typeName]
@@ -98,6 +99,39 @@ func attachToTypes(pieces []piece, nl string) []piece {
 // comparePieces orders pieces by name, using plain byte order.
 func comparePieces(a, b piece) int {
 	return strings.Compare(a.name, b.name)
+}
+
+// firstTypeName provides the name of the local type that the first entry of the given field list refers to,
+// such as the type of a method receiver or of the first result of a function.
+// It provides an empty string if there is no such entry or it doesn't refer to a local type by name.
+func firstTypeName(fields *ast.FieldList) string {
+	if fields == nil || len(fields.List) == 0 {
+		return ""
+	}
+	expr := fields.List[0].Type
+	for {
+		switch e := expr.(type) {
+		case *ast.StarExpr:
+			expr = e.X
+		case *ast.ParenExpr:
+			expr = e.X
+		case *ast.IndexExpr:
+			expr = e.X
+		case *ast.IndexListExpr:
+			expr = e.X
+		case *ast.Ident:
+			return e.Name
+		default:
+			return ""
+		}
+	}
+}
+
+// isConstructor indicates whether the given piece is a constructor:
+// a free-standing function whose name starts with "New" plus the name of the type
+// that its first result is an instance of.
+func isConstructor(p piece) bool {
+	return p.kind == kindFunc && p.returnType != "" && strings.HasPrefix(p.name, "New"+p.returnType)
 }
 
 // isScript indicates whether the file with the given path is a script
@@ -117,30 +151,6 @@ func newline(src []byte) string {
 // parse parses the given Go source code.
 func parse(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
 	return parser.ParseFile(fset, filename, src, parser.ParseComments|parser.SkipObjectResolution)
-}
-
-// receiverTypeName provides the name of the type that the given method receiver refers to.
-func receiverTypeName(recv *ast.FieldList) string {
-	if recv == nil || len(recv.List) == 0 {
-		return ""
-	}
-	expr := recv.List[0].Type
-	for {
-		switch e := expr.(type) {
-		case *ast.StarExpr:
-			expr = e.X
-		case *ast.ParenExpr:
-			expr = e.X
-		case *ast.IndexExpr:
-			expr = e.X
-		case *ast.IndexListExpr:
-			expr = e.X
-		case *ast.Ident:
-			return e.Name
-		default:
-			return ""
-		}
-	}
 }
 
 // sortFreeFuncs sorts the free-standing functions that aren't attached to a type
@@ -205,9 +215,10 @@ func splitPieces(fset *token.FileSet, file *ast.File, src []byte) (string, []pie
 			}
 			p.name = d.Name.Name
 			p.kind = kindFunc
+			p.returnType = firstTypeName(d.Type.Results)
 			if d.Recv != nil {
 				p.kind = kindMethod
-				p.receiver = receiverTypeName(d.Recv)
+				p.receiver = firstTypeName(d.Recv)
 			}
 		case *ast.GenDecl:
 			if d.Doc != nil {
@@ -291,13 +302,14 @@ func withLineGap(p piece, nl string) piece {
 // piece is a top-level declaration or a floating comment,
 // together with the text that precedes it.
 type piece struct {
-	attached  bool   // whether this is a constructor that moved behind its type
-	gapBefore string // the whitespace between the previous piece and this one
-	kind      pieceKind
-	name      string   // the name of the function or method
-	receiver  string   // for methods: the name of the receiver type
-	text      string   // the source code of this piece, including doc and trailing comments
-	typeNames []string // for type declarations: the declared type names
+	attached   bool   // whether this is a constructor that moved behind its type
+	gapBefore  string // the whitespace between the previous piece and this one
+	kind       pieceKind
+	name       string   // the name of the function or method
+	receiver   string   // for methods: the name of the receiver type
+	returnType string   // for functions and methods: the name of the local type that the first result is an instance of
+	text       string   // the source code of this piece, including doc and trailing comments
+	typeNames  []string // for type declarations: the declared type names
 }
 
 // pieceKind describes what a piece contains.
