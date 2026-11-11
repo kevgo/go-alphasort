@@ -189,7 +189,7 @@ func NewFooBar() *FooBar { return nil }
 type Bar struct{}
 `,
 		},
-		"constructor must return an instance of the type first": {
+		"constructor must be named New or New plus an uppercase letter and return an instance of the type first": {
 			give: `package a
 
 type T struct{}
@@ -200,23 +200,27 @@ func NewTOrError() (error, T) { return nil, T{} }
 
 func NewTs() []T { return nil }
 
-func New() T { return T{} }
+func Newest() T { return T{} }
 
 func MakeT() T { return T{} }
+
+func Copy(t T) T { return t }
 `,
 			want: `package a
 
 type T struct{}
 
-func MakeT() T { return T{} }
+func Copy(t T) T { return t }
 
-func New() T { return T{} }
+func MakeT() T { return T{} }
 
 func NewTName() string { return "" }
 
 func NewTOrError() (error, T) { return nil, T{} }
 
 func NewTs() []T { return nil }
+
+func Newest() T { return T{} }
 `,
 		},
 		"constructor names can continue after the type name": {
@@ -249,22 +253,74 @@ func NewTWithDefaults() *T { return &T{} }
 func (t *T) M() {}
 `,
 		},
+		"constructor names don't need to contain the type name": {
+			give: `package a
+
+func helper() {}
+
+func (c *Client) Close() {}
+
+func New(url string) (*Client, error) { return &Client{}, nil }
+
+type Client struct{}
+
+func NewDefault() Client { return Client{} }
+
+func MakeClient() *Client { return nil }
+`,
+			want: `package a
+
+func MakeClient() *Client { return nil }
+
+type Client struct{}
+
+func New(url string) (*Client, error) { return &Client{}, nil }
+
+func NewDefault() Client { return Client{} }
+
+func (c *Client) Close() {}
+
+func helper() {}
+`,
+		},
 		"constructor returning a generic type that contains its type only indirectly stays in place": {
 			give: `package a
 
-func NewTs() Option[[]T] { return Option[[]T]{} }
+import "github.com/samber/mo"
 
-type Option[V any] struct{ value V }
+func NewTs() mo.Option[[]T] { return mo.None[[]T]() }
 
 type T struct{}
 `,
 			want: `package a
 
-func NewTs() Option[[]T] { return Option[[]T]{} }
+import "github.com/samber/mo"
+
+func NewTs() mo.Option[[]T] { return mo.None[[]T]() }
+
+type T struct{}
+`,
+		},
+		"constructor returning a local generic type goes to the outer type unless its name says otherwise": {
+			give: `package a
+
+func NewEmpty() Option[T] { return Option[T]{} }
+
+func NewTOption() Option[T] { return Option[T]{} }
+
+type T struct{}
+
+type Option[V any] struct{ value V }
+`,
+			want: `package a
+
+type T struct{}
+
+func NewTOption() Option[T] { return Option[T]{} }
 
 type Option[V any] struct{ value V }
 
-type T struct{}
+func NewEmpty() Option[T] { return Option[T]{} }
 `,
 		},
 		"constructor returning a type from another package stays in place": {

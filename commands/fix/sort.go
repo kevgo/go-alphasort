@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Sort provides the given Go source code with its elements sorted alphabetically:
@@ -103,17 +105,45 @@ func comparePieces(a, b piece) int {
 
 // constructedType provides the name of the local type that the given piece is a constructor of,
 // or an empty string if it isn't a constructor.
-// A constructor is a free-standing function whose name starts with "New" plus the name of the type
-// and whose first result is an instance of that type, possibly wrapped in a generic type like Option[T].
-// If several types qualify, the one with the longest name matches the function name most precisely.
+// A constructor is a free-standing function whose name is "New" or starts with "New" followed by an uppercase letter,
+// and whose first result is an instance of a local type, possibly wrapped in a generic type like Option[T].
+// If the first result refers to several local types, the function name decides:
+// the longest type name that directly follows the "New" prefix wins.
+// Otherwise the outermost type wins.
 func constructedType(p piece, localTypes map[string]bool) string {
-	result := ""
+	if !isConstructorName(p.name) {
+		return ""
+	}
+	first, named := "", ""
 	for _, typeName := range p.resultTypes {
-		if localTypes[typeName] && strings.HasPrefix(p.name, "New"+typeName) && len(typeName) > len(result) {
-			result = typeName
+		if !localTypes[typeName] {
+			continue
+		}
+		if first == "" {
+			first = typeName
+		}
+		if strings.HasPrefix(p.name, "New"+typeName) && len(typeName) > len(named) {
+			named = typeName
 		}
 	}
-	return result
+	if named != "" {
+		return named
+	}
+	return first
+}
+
+// isConstructorName indicates whether the given function name has the form of a constructor name:
+// "New" or "New" followed by an uppercase letter, like "NewConfig", but not "Newest".
+func isConstructorName(name string) bool {
+	rest, hasPrefix := strings.CutPrefix(name, "New")
+	if !hasPrefix {
+		return false
+	}
+	if rest == "" {
+		return true
+	}
+	first, _ := utf8.DecodeRuneInString(rest)
+	return unicode.IsUpper(first)
 }
 
 // isScript indicates whether the file with the given path is a script
