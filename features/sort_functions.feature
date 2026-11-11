@@ -123,7 +123,73 @@ Feature: sort free-standing functions alphabetically
       func round(f float64) float64 { return math.Round(f) }
       """
 
-  Scenario: functions that don't return an instance of their type first aren't constructors
+  Scenario: constructors can return their type wrapped in a generic type
+    Given a file "shapes.go" with content:
+      """
+      package shapes
+
+      func NewCircleFromText(text string) Option[Circle] { return Option[Circle]{} }
+
+      type Option[T any] struct{ value T }
+
+      func NewCircleOrNil() Option[*Circle] { return Option[*Circle]{} }
+
+      type Circle struct{ R float64 }
+
+      func (c Circle) Area() float64 { return c.R * c.R }
+      """
+    When I run "alphasort fix shapes.go"
+    Then the exit code is 0
+    And the file "shapes.go" now has content:
+      """
+      package shapes
+
+      type Option[T any] struct{ value T }
+
+      type Circle struct{ R float64 }
+
+      func NewCircleFromText(text string) Option[Circle] { return Option[Circle]{} }
+
+      func NewCircleOrNil() Option[*Circle] { return Option[*Circle]{} }
+
+      func (c Circle) Area() float64 { return c.R * c.R }
+      """
+
+  Scenario: constructor names don't need to contain the type name
+    Given a file "client.go" with content:
+      """
+      package client
+
+      func (c *Client) Close() {}
+
+      func NewDefault() Client { return Client{} }
+
+      func helper() {}
+
+      type Client struct{ URL string }
+
+      // New connects to the given URL.
+      func New(url string) (*Client, error) { return &Client{url}, nil }
+      """
+    When I run "alphasort fix client.go"
+    Then the exit code is 0
+    And the file "client.go" now has content:
+      """
+      package client
+
+      func helper() {}
+
+      type Client struct{ URL string }
+
+      // New connects to the given URL.
+      func New(url string) (*Client, error) { return &Client{url}, nil }
+
+      func NewDefault() Client { return Client{} }
+
+      func (c *Client) Close() {}
+      """
+
+  Scenario: functions without a constructor name or without an instance of a type as first result aren't constructors
     Given a file "shapes.go" with content:
       """
       package shapes
@@ -136,7 +202,9 @@ Feature: sort free-standing functions alphabetically
 
       func MakeCircle() Circle { return Circle{} }
 
-      func New() Circle { return Circle{} }
+      func Copy(c Circle) Circle { return c }
+
+      func Newest() Circle { return Circle{} }
       """
     When I run "alphasort fix shapes.go"
     Then the exit code is 0
@@ -146,13 +214,15 @@ Feature: sort free-standing functions alphabetically
 
       type Circle struct{ R float64 }
 
-      func MakeCircle() Circle { return Circle{} }
+      func Copy(c Circle) Circle { return c }
 
-      func New() Circle { return Circle{} }
+      func MakeCircle() Circle { return Circle{} }
 
       func NewCircleName() string { return "circle" }
 
       func NewCircles() []Circle { return nil }
+
+      func Newest() Circle { return Circle{} }
       """
 
   Scenario: methods of types declared in another file stay in place
