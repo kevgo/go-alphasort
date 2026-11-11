@@ -155,7 +155,41 @@ Feature: sort free-standing functions alphabetically
       func (c Circle) Area() float64 { return c.R * c.R }
       """
 
-  Scenario: functions that don't return an instance of their type first aren't constructors
+  Scenario: constructor names don't need to contain the type name
+    Given a file "client.go" with content:
+      """
+      package client
+
+      func (c *Client) Close() {}
+
+      func NewDefault() Client { return Client{} }
+
+      func helper() {}
+
+      type Client struct{ URL string }
+
+      // New connects to the given URL.
+      func New(url string) (*Client, error) { return &Client{url}, nil }
+      """
+    When I run "alphasort fix client.go"
+    Then the exit code is 0
+    And the file "client.go" now has content:
+      """
+      package client
+
+      func helper() {}
+
+      type Client struct{ URL string }
+
+      // New connects to the given URL.
+      func New(url string) (*Client, error) { return &Client{url}, nil }
+
+      func NewDefault() Client { return Client{} }
+
+      func (c *Client) Close() {}
+      """
+
+  Scenario: functions without a constructor name or without an instance of a type as first result aren't constructors
     Given a file "shapes.go" with content:
       """
       package shapes
@@ -168,7 +202,9 @@ Feature: sort free-standing functions alphabetically
 
       func MakeCircle() Circle { return Circle{} }
 
-      func New() Circle { return Circle{} }
+      func Copy(c Circle) Circle { return c }
+
+      func Newest() Circle { return Circle{} }
       """
     When I run "alphasort fix shapes.go"
     Then the exit code is 0
@@ -178,13 +214,15 @@ Feature: sort free-standing functions alphabetically
 
       type Circle struct{ R float64 }
 
-      func MakeCircle() Circle { return Circle{} }
+      func Copy(c Circle) Circle { return c }
 
-      func New() Circle { return Circle{} }
+      func MakeCircle() Circle { return Circle{} }
 
       func NewCircleName() string { return "circle" }
 
       func NewCircles() []Circle { return nil }
+
+      func Newest() Circle { return Circle{} }
       """
 
   Scenario: methods of types declared in another file stay in place
