@@ -18,6 +18,18 @@ func compareEdits(a, b edit) int {
 	return b.end - a.end
 }
 
+// compareEmbedded orders embedded struct fields before regular struct fields.
+func compareEmbedded(a, b *ast.Field) int {
+	switch {
+	case isEmbedded(a) == isEmbedded(b):
+		return 0
+	case isEmbedded(a):
+		return -1
+	default:
+		return 1
+	}
+}
+
 // compareNames orders the given names alphabetically, ignoring case.
 // Names that differ only in case are ordered by their exact spelling to keep the result deterministic.
 func compareNames(a, b string) int {
@@ -145,7 +157,12 @@ func (e *editor) addStruct(structType *ast.StructType) {
 	if len(fields) < 2 {
 		return
 	}
-	e.addList(e.listItems(nodes, structType.Fields.Opening, structType.Fields.Closing, ';'), sortOrder(keys))
+	// embedded fields go first, as required by the embeddedstructfieldcheck linter
+	order := sortOrder(keys)
+	slices.SortStableFunc(order, func(a, b int) int {
+		return compareEmbedded(fields[a], fields[b])
+	})
+	e.addList(e.listItems(nodes, structType.Fields.Opening, structType.Fields.Closing, ';'), order)
 }
 
 // firstCommentAt provides the index of the first comment that starts at or after the given offset.
@@ -269,6 +286,11 @@ func fieldName(field *ast.Field) string {
 			return ""
 		}
 	}
+}
+
+// isEmbedded indicates whether the given struct field is an embedded field.
+func isEmbedded(field *ast.Field) bool {
+	return len(field.Names) == 0
 }
 
 // literalKey provides the text by which to sort the given key of a struct or map literal.

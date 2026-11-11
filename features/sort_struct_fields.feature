@@ -33,8 +33,8 @@ Feature: sort struct fields alphabetically
 
       // Config configures the app.
       type Config struct {
-      	Host    string
       	*Logger
+      	Host    string
       	Port    int `json:"port"`
       	// verbose enables more output
       	verbose bool
@@ -163,7 +163,7 @@ Feature: sort struct fields alphabetically
       }
       """
 
-  Scenario: embedded fields sort by their type name
+  Scenario: embedded fields go first, sorted by their type name
     Given a file "embed.go" with content:
       """
       package embed
