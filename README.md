@@ -47,13 +47,3 @@ go install github.com/kevgo/go-alphasort/cmd/alphasort@latest
 ## Development
 
 Run `make` to see available dev tasks.
-
-## Release
-
-To release a new version, push a tag:
-
-```sh
-git sync --all && git checkout main && git tag v0.0.1 && git push --tags
-```
-
-Run `make release-snapshot` to try the release build locally.
