@@ -141,6 +141,110 @@ func (c *Counter) Beta() {}
 func helper() {}
 `,
 		},
+		"constructor goes to the type it returns, not the type its name starts with": {
+			give: `package a
+
+func NewFooBar() *FooBar { return nil }
+
+func NewFooFromBar(b Bar) Foo { return Foo{} }
+
+type Foo struct{}
+
+type FooBar struct{}
+
+type Bar struct{}
+`,
+			want: `package a
+
+type Foo struct{}
+
+func NewFooFromBar(b Bar) Foo { return Foo{} }
+
+type FooBar struct{}
+
+func NewFooBar() *FooBar { return nil }
+
+type Bar struct{}
+`,
+		},
+		"constructor must return an instance of the type first": {
+			give: `package a
+
+type T struct{}
+
+func NewTName() string { return "" }
+
+func NewTOrError() (error, T) { return nil, T{} }
+
+func NewTs() []T { return nil }
+
+func New() T { return T{} }
+
+func MakeT() T { return T{} }
+`,
+			want: `package a
+
+type T struct{}
+
+func MakeT() T { return T{} }
+
+func New() T { return T{} }
+
+func NewTName() string { return "" }
+
+func NewTOrError() (error, T) { return nil, T{} }
+
+func NewTs() []T { return nil }
+`,
+		},
+		"constructor names can continue after the type name": {
+			give: `package a
+
+func helper() {}
+
+func (t *T) M() {}
+
+type T struct{}
+
+func NewTFromString(s string) (*T, error) { return &T{}, nil }
+
+func NewT() T { return T{} }
+
+func NewTWithDefaults() *T { return &T{} }
+`,
+			want: `package a
+
+func helper() {}
+
+type T struct{}
+
+func NewT() T { return T{} }
+
+func NewTFromString(s string) (*T, error) { return &T{}, nil }
+
+func NewTWithDefaults() *T { return &T{} }
+
+func (t *T) M() {}
+`,
+		},
+		"constructor returning a type from another package stays in place": {
+			give: `package a
+
+import "strings"
+
+func NewBuilder() strings.Builder { return strings.Builder{} }
+
+type Builder struct{}
+`,
+			want: `package a
+
+import "strings"
+
+func NewBuilder() strings.Builder { return strings.Builder{} }
+
+type Builder struct{}
+`,
+		},
 		"constructor without methods": {
 			give: `package a
 
@@ -575,28 +679,6 @@ func beta() { fmt.Println("b") }
 var V = 2
 
 type T int
-`,
-		},
-		"only an exact New + type name is a constructor": {
-			give: `package a
-
-type T struct{}
-
-func NewTFromString(s string) T { return T{} }
-
-func New() T { return T{} }
-
-func NewT() T { return T{} }
-`,
-			want: `package a
-
-type T struct{}
-
-func NewT() T { return T{} }
-
-func New() T { return T{} }
-
-func NewTFromString(s string) T { return T{} }
 `,
 		},
 		"realistic functions with code, empty lines, and comments": {
