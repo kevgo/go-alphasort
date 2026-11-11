@@ -56,9 +56,9 @@ func attachToTypes(pieces []piece, nl string) []piece {
 				moved[i] = true
 			}
 		case kindFunc:
-			if isConstructor(p) && localTypes[p.returnType] {
+			if typeName := constructedType(p, localTypes); typeName != "" {
 				p.attached = true
-				constructors[p.returnType] = append(constructors[p.returnType], p)
+				constructors[typeName] = append(constructors[typeName], p)
 				moved[i] = true
 			}
 		case kindOther, kindType:
@@ -101,37 +101,19 @@ func comparePieces(a, b piece) int {
 	return strings.Compare(a.name, b.name)
 }
 
-// firstTypeName provides the name of the local type that the first entry of the given field list refers to,
-// such as the type of a method receiver or of the first result of a function.
-// It provides an empty string if there is no such entry or it doesn't refer to a local type by name.
-func firstTypeName(fields *ast.FieldList) string {
-	if fields == nil || len(fields.List) == 0 {
-		return ""
-	}
-	expr := fields.List[0].Type
-	for {
-		switch e := expr.(type) {
-		case *ast.StarExpr:
-			expr = e.X
-		case *ast.ParenExpr:
-			expr = e.X
-		case *ast.IndexExpr:
-			expr = e.X
-		case *ast.IndexListExpr:
-			expr = e.X
-		case *ast.Ident:
-			return e.Name
-		default:
-			return ""
+// constructedType provides the name of the local type that the given piece is a constructor of,
+// or an empty string if it isn't a constructor.
+// A constructor is a free-standing function whose name starts with "New" plus the name of the type
+// and whose first result is an instance of that type, possibly wrapped in a generic type like Option[T].
+// If several types qualify, the one with the longest name matches the function name most precisely.
+func constructedType(p piece, localTypes map[string]bool) string {
+	result := ""
+	for _, typeName := range p.resultTypes {
+		if localTypes[typeName] && strings.HasPrefix(p.name, "New"+typeName) && len(typeName) > len(result) {
+			result = typeName
 		}
 	}
-}
-
-// isConstructor indicates whether the given piece is a constructor:
-// a free-standing function whose name starts with "New" plus the name of the type
-// that its first result is an instance of.
-func isConstructor(p piece) bool {
-	return p.kind == kindFunc && p.returnType != "" && strings.HasPrefix(p.name, "New"+p.returnType)
+	return result
 }
 
 // isScript indicates whether the file with the given path is a script
@@ -151,6 +133,59 @@ func newline(src []byte) string {
 // parse parses the given Go source code.
 func parse(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
 	return parser.ParseFile(fset, filename, src, parser.ParseComments|parser.SkipObjectResolution)
+}
+
+// receiverTypeName provides the name of the type that the given method receiver refers to.
+func receiverTypeName(recv *ast.FieldList) string {
+	if recv == nil || len(recv.List) == 0 {
+		return ""
+	}
+	expr := recv.List[0].Type
+	for {
+		switch e := expr.(type) {
+		case *ast.StarExpr:
+			expr = e.X
+		case *ast.ParenExpr:
+			expr = e.X
+		case *ast.IndexExpr:
+			expr = e.X
+		case *ast.IndexListExpr:
+			expr = e.X
+		case *ast.Ident:
+			return e.Name
+		default:
+			return ""
+		}
+	}
+}
+
+// resultTypeNames provides the names of the types that the first of the given function results
+// is an instance of: the type itself, as in T or *T,
+// and the type arguments of a generic type, as in Option[T], Option[*T], or mo.Option[T].
+func resultTypeNames(results *ast.FieldList) []string {
+	if results == nil || len(results.List) == 0 {
+		return nil
+	}
+	typ := unwrapType(results.List[0].Type)
+	var base ast.Expr
+	var args []ast.Expr
+	switch t := typ.(type) {
+	case *ast.Ident:
+		return []string{t.Name}
+	case *ast.IndexExpr:
+		base, args = t.X, []ast.Expr{t.Index}
+	case *ast.IndexListExpr:
+		base, args = t.X, t.Indices
+	default:
+		return nil
+	}
+	result := []string{}
+	for _, expr := range append([]ast.Expr{base}, args...) {
+		if ident, ok := unwrapType(expr).(*ast.Ident); ok {
+			result = append(result, ident.Name)
+		}
+	}
+	return result
 }
 
 // sortFreeFuncs sorts the free-standing functions that aren't attached to a type
@@ -215,10 +250,10 @@ func splitPieces(fset *token.FileSet, file *ast.File, src []byte) (string, []pie
 			}
 			p.name = d.Name.Name
 			p.kind = kindFunc
-			p.returnType = firstTypeName(d.Type.Results)
+			p.resultTypes = resultTypeNames(d.Type.Results)
 			if d.Recv != nil {
 				p.kind = kindMethod
-				p.receiver = firstTypeName(d.Recv)
+				p.receiver = receiverTypeName(d.Recv)
 			}
 		case *ast.GenDecl:
 			if d.Doc != nil {
@@ -291,6 +326,20 @@ func trailingCommentEnd(tokFile *token.File, groups []*ast.CommentGroup, declEnd
 	return result
 }
 
+// unwrapType provides the given type expression without enclosing parentheses and pointer indirections.
+func unwrapType(expr ast.Expr) ast.Expr {
+	for {
+		switch e := expr.(type) {
+		case *ast.StarExpr:
+			expr = e.X
+		case *ast.ParenExpr:
+			expr = e.X
+		default:
+			return expr
+		}
+	}
+}
+
 // withLineGap provides the given piece, ensuring that it starts on a new line.
 func withLineGap(p piece, nl string) piece {
 	if strings.TrimSpace(p.gapBefore) != "" || !strings.Contains(p.gapBefore, "\n") {
@@ -302,14 +351,14 @@ func withLineGap(p piece, nl string) piece {
 // piece is a top-level declaration or a floating comment,
 // together with the text that precedes it.
 type piece struct {
-	attached   bool   // whether this is a constructor that moved behind its type
-	gapBefore  string // the whitespace between the previous piece and this one
-	kind       pieceKind
-	name       string   // the name of the function or method
-	receiver   string   // for methods: the name of the receiver type
-	returnType string   // for functions and methods: the name of the local type that the first result is an instance of
-	text       string   // the source code of this piece, including doc and trailing comments
-	typeNames  []string // for type declarations: the declared type names
+	attached    bool   // whether this is a constructor that moved behind its type
+	gapBefore   string // the whitespace between the previous piece and this one
+	kind        pieceKind
+	name        string   // the name of the function or method
+	receiver    string   // for methods: the name of the receiver type
+	resultTypes []string // for functions and methods: the names of the types that the first result can be an instance of
+	text        string   // the source code of this piece, including doc and trailing comments
+	typeNames   []string // for type declarations: the declared type names
 }
 
 // pieceKind describes what a piece contains.

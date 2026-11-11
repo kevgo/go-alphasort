@@ -123,6 +123,38 @@ Feature: sort free-standing functions alphabetically
       func round(f float64) float64 { return math.Round(f) }
       """
 
+  Scenario: constructors can return their type wrapped in a generic type
+    Given a file "shapes.go" with content:
+      """
+      package shapes
+
+      func NewCircleFromText(text string) Option[Circle] { return Option[Circle]{} }
+
+      type Option[T any] struct{ value T }
+
+      func NewCircleOrNil() Option[*Circle] { return Option[*Circle]{} }
+
+      type Circle struct{ R float64 }
+
+      func (c Circle) Area() float64 { return c.R * c.R }
+      """
+    When I run "alphasort fix shapes.go"
+    Then the exit code is 0
+    And the file "shapes.go" now has content:
+      """
+      package shapes
+
+      type Option[T any] struct{ value T }
+
+      type Circle struct{ R float64 }
+
+      func NewCircleFromText(text string) Option[Circle] { return Option[Circle]{} }
+
+      func NewCircleOrNil() Option[*Circle] { return Option[*Circle]{} }
+
+      func (c Circle) Area() float64 { return c.R * c.R }
+      """
+
   Scenario: functions that don't return an instance of their type first aren't constructors
     Given a file "shapes.go" with content:
       """
