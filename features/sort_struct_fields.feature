@@ -34,7 +34,6 @@ Feature: sort struct fields alphabetically
       // Config configures the app.
       type Config struct {
       	*Logger
-
       	Host    string
       	Port    int `json:"port"`
       	// verbose enables more output
@@ -164,7 +163,7 @@ Feature: sort struct fields alphabetically
       }
       """
 
-  Scenario: embedded fields go first, sorted by their type name, separated from regular fields by a blank line
+  Scenario: embedded fields go first, sorted by their type name
     Given a file "embed.go" with content:
       """
       package embed
@@ -191,7 +190,6 @@ Feature: sort struct fields alphabetically
       type T struct {
       	Base
       	*sync.Mutex
-
       	name string
       }
 

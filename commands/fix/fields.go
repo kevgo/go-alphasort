@@ -55,26 +55,6 @@ type editor struct {
 	tokFile  *token.File
 }
 
-// addBlankLine registers an edit that ensures that the given gap between two list items contains a blank line.
-// It leaves gaps alone that span no line break, already contain a blank line, or contain floating comments.
-func (e *editor) addBlankLine(start, end int) {
-	gap := e.src[start:end]
-	if strings.Count(gap, "\n") != 1 || strings.TrimSpace(gap) != "" {
-		return
-	}
-	pos := strings.IndexByte(gap, '\n')
-	newline := "\n"
-	if pos > 0 && gap[pos-1] == '\r' {
-		pos--
-		newline = "\r\n"
-	}
-	e.edits = append(e.edits, edit{
-		end:    start + pos,
-		render: func() string { return newline },
-		start:  start + pos,
-	})
-}
-
 // addList registers an edit that brings the given list of items into the given order.
 func (e *editor) addList(items []listItem, order []int) {
 	if slices.IsSorted(order) {
@@ -86,7 +66,7 @@ func (e *editor) addList(items []listItem, order []int) {
 			var result strings.Builder
 			for slot := range items {
 				if slot > 0 {
-					result.WriteString(e.text(items[slot-1].trailEnd, items[slot].leadStart))
+					result.WriteString(e.src[items[slot-1].trailEnd:items[slot].leadStart])
 				}
 				item := items[order[slot]]
 				result.WriteString(e.text(item.leadStart, item.coreEnd))
@@ -167,13 +147,9 @@ func (e *editor) addStruct(structType *ast.StructType) {
 	}
 	keys := make([]string, len(fields))
 	nodes := make([]ast.Node, len(fields))
-	embeddedCount := 0
 	for i, field := range fields {
 		if len(field.Names) > 1 {
 			e.addNames(field)
-		}
-		if isEmbedded(field) {
-			embeddedCount++
 		}
 		keys[i] = fieldName(field)
 		nodes[i] = field
@@ -186,11 +162,7 @@ func (e *editor) addStruct(structType *ast.StructType) {
 	slices.SortStableFunc(order, func(a, b int) int {
 		return compareEmbedded(fields[a], fields[b])
 	})
-	items := e.listItems(nodes, structType.Fields.Opening, structType.Fields.Closing, ';')
-	if embeddedCount > 0 && embeddedCount < len(fields) {
-		e.addBlankLine(items[embeddedCount-1].trailEnd, items[embeddedCount].leadStart)
-	}
-	e.addList(items, order)
+	e.addList(e.listItems(nodes, structType.Fields.Opening, structType.Fields.Closing, ';'), order)
 }
 
 // firstCommentAt provides the index of the first comment that starts at or after the given offset.

@@ -14,10 +14,7 @@ Sorts all elements of Golang source code alphabetically.
     so their free-standing functions keep their order.
     Everything else in them gets sorted as usual.
 - Struct fields get sorted case insensitive.
-  Embedded fields go first, separated from the regular fields by a blank line,
-  as required by the
-  [embeddedstructfieldcheck](https://github.com/manuelarte/embeddedstructfieldcheck)
-  linter.
+  Embedded fields go first.
   Structs containing blank (`_`) fields keep their order,
   since they usually serve as padding.
 - Map literals with identifier

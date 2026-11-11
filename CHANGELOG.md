@@ -2,7 +2,7 @@
 
 ## next
 
-- embedded struct fields go before regular struct fields, separated by a blank line
+- embedded struct fields go before regular struct fields
 
 ## 0.0.2
 
