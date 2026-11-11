@@ -1,6 +1,6 @@
 # go-alphasort changelog
 
-## next
+## 0.0.3
 
 - embedded struct fields go before regular struct fields
 
