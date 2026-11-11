@@ -71,7 +71,38 @@ type T struct {
 			give: "package a\r\n\r\ntype T struct {\r\n\t// b\r\n\tb int\r\n\ta int\r\n}\r\n",
 			want: "package a\r\n\r\ntype T struct {\r\n\ta int\r\n\t// b\r\n\tb int\r\n}\r\n",
 		},
-		"embedded fields sort by their type name": {
+		"embedded fields get separated from regular fields by a blank line": {
+			give: `package a
+
+type T struct {
+	Base // trailing Base
+	// doc of name
+	name string
+}
+
+type U struct {
+	Base
+
+	name string
+}
+`,
+			want: `package a
+
+type T struct {
+	Base // trailing Base
+
+	// doc of name
+	name string
+}
+
+type U struct {
+	Base
+
+	name string
+}
+`,
+		},
+		"embedded fields go first, sorted by their type name": {
 			give: `package a
 
 import "sync"
@@ -89,6 +120,41 @@ import "sync"
 type T struct {
 	Base
 	*sync.Mutex
+
+	name string
+}
+`,
+		},
+		"embedded fields in CRLF files": {
+			give: "package a\r\n\r\ntype T struct {\r\n\tname string\r\n\tBase\r\n}\r\n",
+			want: "package a\r\n\r\ntype T struct {\r\n\tBase\r\n\r\n\tname string\r\n}\r\n",
+		},
+		"embedded fields in single-line structs": {
+			give: `package a
+
+type T struct{ name string; Base }
+`,
+			want: `package a
+
+type T struct{ Base; name string }
+`,
+		},
+		"embedded fields with floating comments in between keep that spacing": {
+			give: `package a
+
+type T struct {
+	name string
+	// end of section
+
+	Base
+}
+`,
+			want: `package a
+
+type T struct {
+	Base
+	// end of section
+
 	name string
 }
 `,

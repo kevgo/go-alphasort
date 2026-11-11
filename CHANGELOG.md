@@ -1,5 +1,9 @@
 # go-alphasort changelog
 
+## next
+
+- embedded struct fields go before regular struct fields, separated by a blank line
+
 ## 0.0.2
 
 - constructors are all functions that start with "New" + uppercase character and whose first return value contains an instance of the type
