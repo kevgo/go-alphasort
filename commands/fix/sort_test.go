@@ -141,6 +141,28 @@ func (c *Counter) Beta() {}
 func helper() {}
 `,
 		},
+		"constructor goes to the longest type name that its name starts with": {
+			give: `package a
+
+func NewFooBar() Pair[Foo, FooBar] { return Pair[Foo, FooBar]{} }
+
+type Foo struct{}
+
+type FooBar struct{}
+
+type Pair[A, B any] struct{}
+`,
+			want: `package a
+
+type Foo struct{}
+
+type FooBar struct{}
+
+func NewFooBar() Pair[Foo, FooBar] { return Pair[Foo, FooBar]{} }
+
+type Pair[A, B any] struct{}
+`,
+		},
 		"constructor goes to the type it returns, not the type its name starts with": {
 			give: `package a
 
@@ -227,6 +249,24 @@ func NewTWithDefaults() *T { return &T{} }
 func (t *T) M() {}
 `,
 		},
+		"constructor returning a generic type that contains its type only indirectly stays in place": {
+			give: `package a
+
+func NewTs() Option[[]T] { return Option[[]T]{} }
+
+type Option[V any] struct{ value V }
+
+type T struct{}
+`,
+			want: `package a
+
+func NewTs() Option[[]T] { return Option[[]T]{} }
+
+type Option[V any] struct{ value V }
+
+type T struct{}
+`,
+		},
 		"constructor returning a type from another package stays in place": {
 			give: `package a
 
@@ -243,6 +283,44 @@ import "strings"
 func NewBuilder() strings.Builder { return strings.Builder{} }
 
 type Builder struct{}
+`,
+		},
+		"constructor returning its type wrapped in a generic type": {
+			give: `package a
+
+import "github.com/samber/mo"
+
+func NewTWithError() Result[T, error] { return Result[T, error]{} }
+
+func NewTOrNil() Option[*T] { return Option[*T]{} }
+
+func NewT() Option[T] { return Option[T]{} }
+
+func NewTFromEnv() mo.Option[T] { return mo.None[T]() }
+
+type Option[V any] struct{ value V }
+
+type Result[V, E any] struct{ value V }
+
+type T struct{}
+`,
+			want: `package a
+
+import "github.com/samber/mo"
+
+type Option[V any] struct{ value V }
+
+type Result[V, E any] struct{ value V }
+
+type T struct{}
+
+func NewT() Option[T] { return Option[T]{} }
+
+func NewTFromEnv() mo.Option[T] { return mo.None[T]() }
+
+func NewTOrNil() Option[*T] { return Option[*T]{} }
+
+func NewTWithError() Result[T, error] { return Result[T, error]{} }
 `,
 		},
 		"constructor without methods": {
