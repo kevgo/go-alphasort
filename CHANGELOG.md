@@ -1,5 +1,9 @@
 # go-alphasort changelog
 
+## 0.0.2
+
+- constructors are all functions that start with "New" + uppercase character and whose first return value contains an instance of the type
+
 ## 0.0.1
 
 - sorts freestanding functions alphabetically (public first)
